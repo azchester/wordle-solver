@@ -1,0 +1,21 @@
+# OS / editor
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+
+# Dependencies / local
+node_modules/
+.npm/
+
+# Scratch downloads (canonical copies live under data/)
+/google10k.txt
+/google20k.txt
+/possible.txt
+/wordle-answers.txt
+
+# Logs / env
+*.log
+.env
+.env.*

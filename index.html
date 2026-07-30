@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wordle Solver</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>Wordle Solver</h1>
+        <p>
+          Wordle helper: guess entry, letter filters, common-word list, plural
+          segregation, and expected-remaining ranking.
+        </p>
+        <div class="top-actions" id="top-actions">
+          <button type="button" class="btn danger" id="reset-btn">
+            Reset all
+          </button>
+        </div>
+      </header>
+
+      <div class="layout">
+        <div class="col controls">
+          <section class="panel" aria-labelledby="guess-heading">
+            <h2 id="guess-heading">Enter guess</h2>
+            <p class="hint">
+              Type a 5-letter word, then click each tile to cycle
+              <strong>gray</strong> (absent) → <strong>yellow</strong> (wrong
+              spot) → <strong>green</strong> (correct). Confirmed greens
+              auto-fill. Submit updates filters.
+            </p>
+            <div class="guess-row" id="guess-tiles"></div>
+            <div class="guess-actions">
+              <button type="button" class="btn" id="guess-submit">
+                Submit guess
+              </button>
+              <button type="button" class="btn secondary" id="guess-clear">
+                Clear free tiles
+              </button>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="history-heading">
+            <h2 id="history-heading">Guess history</h2>
+            <ol class="history-list" id="history-list"></ol>
+            <p class="hint" id="history-empty">No guesses yet.</p>
+          </section>
+
+          <section class="panel" aria-labelledby="known-heading">
+            <h2 id="known-heading">Puzzle (known greens)</h2>
+            <div class="known-row" id="known-letters"></div>
+          </section>
+
+          <section class="panel" aria-labelledby="letters-heading">
+            <h2 id="letters-heading">Letter status</h2>
+            <div class="legend">
+              <span><i class="swatch yes"></i> YES — may appear</span>
+              <span><i class="swatch no"></i> NO — excluded</span>
+              <span><i class="swatch has"></i> HAS — must appear</span>
+              <span>Click to cycle</span>
+            </div>
+            <div class="letter-grid" id="letter-grid"></div>
+          </section>
+
+          <section class="panel" aria-labelledby="posex-heading">
+            <h2 id="posex-heading">Position exclusion (yellow)</h2>
+            <p class="hint">
+              Letter is in the word but <em>not</em> at this position.
+            </p>
+            <div class="posex-row">
+              <label>
+                Letter
+                <select id="posex-letter"></select>
+              </label>
+              <label>
+                Position
+                <select id="posex-position">
+                  <option value="0">1</option>
+                  <option value="1">2</option>
+                  <option value="2">3</option>
+                  <option value="3">4</option>
+                  <option value="4">5</option>
+                </select>
+              </label>
+              <button type="button" id="posex-add" class="btn">Add</button>
+            </div>
+            <ul class="posex-list" id="posex-list"></ul>
+          </section>
+
+          <section class="panel" aria-labelledby="class-heading">
+            <h2 id="class-heading">Word list filters</h2>
+            <p class="hint">
+              Common ≈ Wordle answers + frequent English (Google 20k). Plurals ≈
+              likely -s forms (not -ss/-us/-is).
+            </p>
+            <div class="class-toggles">
+              <label class="check-label">
+                <input type="checkbox" id="toggle-common-only" checked />
+                Common words only
+              </label>
+              <label class="check-label">
+                <input type="checkbox" id="toggle-exclude-plurals" checked />
+                Exclude plurals from main list
+              </label>
+              <label class="check-label">
+                <input type="checkbox" id="toggle-show-plurals" />
+                Show plurals in separate section
+              </label>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="mins-heading">
+            <h2 id="mins-heading">Minimums</h2>
+            <div class="mins-row">
+              <label>
+                Min unique letters
+                <input
+                  type="number"
+                  id="min-unique"
+                  min="0"
+                  max="5"
+                  value="0"
+                />
+              </label>
+              <label>
+                Min unique vowels
+                <input
+                  type="number"
+                  id="min-vowels"
+                  min="0"
+                  max="5"
+                  value="0"
+                />
+              </label>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="weight-heading">
+            <h2 id="weight-heading">Ranking</h2>
+            <p class="hint" id="ranking-hint">
+              Ranked by <strong>expected remaining candidates</strong> after the
+              Wordle color pattern (lower is better). Tie-break: entropy
+              (bits). On very large lists only the top ~1000 high-unique
+              guesses are fully scored against all remaining answers.
+            </p>
+            <!-- legacy weight controls kept hidden for API compatibility -->
+            <input type="hidden" id="freq-weight" value="65" />
+            <span id="freq-label" hidden>65%</span>
+            <span id="pos-label" hidden>35%</span>
+            <button type="button" class="btn secondary" id="reset-weights" hidden>
+              Reset weights
+            </button>
+          </section>
+        </div>
+
+        <div class="col results">
+          <section class="panel optimal" aria-labelledby="opt-heading">
+            <h2 id="opt-heading">Optimal guess</h2>
+            <div class="optimal-row">
+              <div class="optimal-word" id="optimal-word">—</div>
+              <div class="optimal-score">
+                E[left] <strong id="optimal-score">—</strong>
+              </div>
+              <button type="button" class="btn" id="fill-optimal-guess">
+                Guess
+              </button>
+            </div>
+            <div class="stats" id="stats">
+              <div>
+                Remaining:
+                <strong id="remaining-count">—</strong>
+              </div>
+              <div>
+                Removed: <strong id="removed-count">—</strong>
+              </div>
+            </div>
+            <div class="leaders" id="position-leaders"></div>
+          </section>
+
+          <section class="panel" aria-labelledby="results-heading">
+            <h2 id="results-heading">Available words</h2>
+            <p class="hint" id="list-mode-hint"></p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="num" title="Expected remaining candidates (lower is better)">
+                      E[left]
+                    </th>
+                    <th>Word</th>
+                    <th class="num"># Unique</th>
+                    <th class="num"># U. Vowels</th>
+                    <th class="row-action">Guess</th>
+                  </tr>
+                </thead>
+                <tbody id="results-body"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="empty-msg" hidden></div>
+          </section>
+
+          <section
+            class="panel"
+            id="plurals-panel"
+            aria-labelledby="plurals-heading"
+            hidden
+          >
+            <h2 id="plurals-heading">Plurals (segregated)</h2>
+            <p class="hint">
+              Likely -s forms matching your letter filters. Not mixed into the
+              main ranking above.
+            </p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="num">E[left]</th>
+                    <th>Word</th>
+                    <th class="num"># Unique</th>
+                    <th class="num"># U. Vowels</th>
+                    <th class="row-action">Guess</th>
+                  </tr>
+                </thead>
+                <tbody id="plurals-body"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="plurals-empty" hidden></div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <script src="words.js"></script>
+    <script src="common-words.js"></script>
+    <script src="filter.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
