@@ -507,8 +507,9 @@
    * Rules:
    *  - green → known[i]=letter, letter HAS; never demotes prior stronger status to YES
    *  - yellow → letter HAS + position exclusion at i; does not fill known[i]
-   *  - gray → letter NO only if that letter has no green/yellow on this same guess
-   *           and is not already HAS/known from prior constraints
+   *  - gray → letter is not at this index. If the letter is still in play
+   *           (green/yellow on this guess, or already HAS/known), add a
+   *           position exclusion at i. Otherwise mark letter NO.
    *  - Prior greens and HAS are never cleared by a later gray
    *
    * @param {object} constraints
@@ -540,7 +541,7 @@
 
     var next = cloneConstraints(constraints);
 
-    // Letters that are green or yellow on THIS guess (cannot be gray-excluded)
+    // Letters that are green or yellow on THIS guess (cannot be fully gray-excluded)
     var requiredOnGuess = Object.create(null);
     for (i = 0; i < 5; i++) {
       if (tiles[i] === "green" || tiles[i] === "yellow") {
@@ -567,22 +568,29 @@
       }
     }
 
-    // Grays: exclude only if letter is not required on this guess and not already HAS/known
+    // Grays: letter is never at this position.
+    // If still in play (green/yellow this guess, or prior HAS/known), only
+    // exclude the position — do not mark the letter NO (Wordle multi-letter).
+    // Otherwise the letter is fully absent → NO and drop its pos exclusions.
     for (i = 0; i < 5; i++) {
       if (tiles[i] !== "gray") continue;
       ch = word.charAt(i);
-      if (requiredOnGuess[ch]) continue;
-      if (next.statuses[ch] === "HAS") continue;
-      var knownElsewhere = false;
-      for (var k = 0; k < 5; k++) {
-        if (next.known[k] === ch) {
-          knownElsewhere = true;
-          break;
+      var stillInPlay = !!requiredOnGuess[ch] || next.statuses[ch] === "HAS";
+      if (!stillInPlay) {
+        for (var k = 0; k < 5; k++) {
+          if (next.known[k] === ch) {
+            stillInPlay = true;
+            break;
+          }
         }
       }
-      if (knownElsewhere) continue;
+      if (stillInPlay) {
+        if (!hasPosExclusion(next.positionExclusions, ch, i)) {
+          next.positionExclusions.push({ letter: ch, position: i });
+        }
+        continue;
+      }
       next.statuses[ch] = "NO";
-      // Drop position exclusions for fully excluded letters (cleanup)
       next.positionExclusions = next.positionExclusions.filter(function (pe) {
         return pe.letter !== ch;
       });

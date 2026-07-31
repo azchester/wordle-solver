@@ -200,7 +200,7 @@ test("gray does not demote prior HAS/green", function () {
   assert.strictEqual(r3.constraints.known[0], "A");
 });
 
-test("same-guess green+gray duplicate letter: gray does not exclude", function () {
+test("same-guess green+gray duplicate letter: gray does not fully exclude", function () {
   // Word with double letter: first green, second gray → still HAS
   var r = filter.applyGuess(open(), "LLAMA", [
     "green",
@@ -213,6 +213,124 @@ test("same-guess green+gray duplicate letter: gray does not exclude", function (
   assert.strictEqual(r.constraints.statuses.L, "HAS");
   // second L is gray but L required on guess via green → not NO
   assert.notStrictEqual(r.constraints.statuses.L, "NO");
+  // gray L at index 1 must still add a position exclusion
+  assert.ok(
+    r.constraints.positionExclusions.some(function (pe) {
+      return pe.letter === "L" && pe.position === 1;
+    }),
+    "expected position exclusion L@1"
+  );
+});
+
+test("duplicate green+gray R (CURRY): pos exclude gray R, keep HAS", function () {
+  // Real game (answer SHRUG): IRATE → R yellow; CURRY → U yellow, R green, R gray
+  // SHRUG has one R at index 2; second R in CURRY is correctly gray (excess).
+  var c = open();
+  var r1 = filter.applyGuess(c, "IRATE", [
+    "gray",
+    "yellow",
+    "gray",
+    "gray",
+    "gray",
+  ]);
+  var r2 = filter.applyGuess(r1.constraints, "CURRY", [
+    "gray",
+    "yellow",
+    "green",
+    "gray",
+    "gray",
+  ]);
+  assert.strictEqual(r2.constraints.known[2], "R");
+  assert.strictEqual(r2.constraints.statuses.R, "HAS");
+  assert.strictEqual(r2.constraints.statuses.U, "HAS");
+  // Yellow R from IRATE → R not at index 1
+  assert.ok(
+    r2.constraints.positionExclusions.some(function (pe) {
+      return pe.letter === "R" && pe.position === 1;
+    }),
+    "expected R@1 exclusion from IRATE yellow"
+  );
+  // Gray second R in CURRY → R not at index 3 (bug: was missing)
+  assert.ok(
+    r2.constraints.positionExclusions.some(function (pe) {
+      return pe.letter === "R" && pe.position === 3;
+    }),
+    "expected R@3 exclusion from gray duplicate R"
+  );
+  // Yellow U → U not at index 1
+  assert.ok(
+    r2.constraints.positionExclusions.some(function (pe) {
+      return pe.letter === "U" && pe.position === 1;
+    }),
+    "expected U@1 exclusion"
+  );
+  // Answer still matches; no remaining word may place R at the gray slot
+  var remaining = filter.filterWords(WORDS, r2.constraints).map(function (row) {
+    return row.word;
+  });
+  assert.ok(remaining.indexOf("SHRUG") !== -1, "SHRUG must remain a candidate");
+  remaining.forEach(function (w) {
+    assert.notStrictEqual(w.charAt(3), "R", "no candidate with R@3: " + w);
+    assert.strictEqual(w.charAt(2), "R", "known green R@2: " + w);
+    assert.ok(w.indexOf("U") !== -1, "must contain U: " + w);
+  });
+});
+
+test("same-guess yellow+gray duplicate: both positions excluded, still HAS", function () {
+  // Two L's: one yellow, one gray → L must appear, not at either of those slots
+  var r = filter.applyGuess(open(), "LLAMA", [
+    "yellow",
+    "gray",
+    "gray",
+    "gray",
+    "gray",
+  ]);
+  assert.strictEqual(r.constraints.statuses.L, "HAS");
+  assert.ok(
+    r.constraints.positionExclusions.some(function (pe) {
+      return pe.letter === "L" && pe.position === 0;
+    }),
+    "yellow L@0"
+  );
+  assert.ok(
+    r.constraints.positionExclusions.some(function (pe) {
+      return pe.letter === "L" && pe.position === 1;
+    }),
+    "gray L@1"
+  );
+});
+
+test("prior HAS + later gray at a slot: position exclusion, not demote", function () {
+  var r1 = filter.applyGuess(open(), "RAISE", [
+    "yellow",
+    "gray",
+    "gray",
+    "gray",
+    "gray",
+  ]);
+  assert.strictEqual(r1.constraints.statuses.R, "HAS");
+  // Probe with extra R that is gray (only one R in answer already accounted as HAS)
+  var r2 = filter.applyGuess(r1.constraints, "BERRY", [
+    "gray",
+    "gray",
+    "gray",
+    "gray",
+    "gray",
+  ]);
+  // Wait — if all gray including R, and R was HAS, should keep HAS + pos-exclude R slots
+  assert.strictEqual(r2.constraints.statuses.R, "HAS");
+  assert.ok(
+    r2.constraints.positionExclusions.some(function (pe) {
+      return pe.letter === "R" && pe.position === 2;
+    }),
+    "gray R@2 from BERRY"
+  );
+  assert.ok(
+    r2.constraints.positionExclusions.some(function (pe) {
+      return pe.letter === "R" && pe.position === 3;
+    }),
+    "gray R@3 from BERRY"
+  );
 });
 
 test("historyEntry tiles normalized from aliases", function () {

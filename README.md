@@ -71,9 +71,9 @@ When you submit a guess, tile colors merge into constraints as follows:
 |------|--------|
 | **Green** | Fixed letter at that position + letter marked HAS |
 | **Yellow** | Letter marked HAS + position exclusion at that index |
-| **Gray** | Letter marked NO *only if* it has no green/yellow on the same guess (and is not already HAS / known green) |
+| **Gray** | Letter is not at that index. If the letter is still in play (green/yellow on this guess, or already HAS / known green), add a **position exclusion** only. Otherwise mark the letter NO. |
 
-This matches standard Wordle multi-letter handling: a gray does not exclude a letter that also scored yellow or green in that guess.
+This matches standard Wordle multi-letter handling: a gray tile never fully excludes a letter that also scored yellow or green, but it *does* exclude that letter from the gray position (e.g. `CURRY` with green R then gray R → R stays HAS, R forbidden at the gray slot).
 
 ---
 
