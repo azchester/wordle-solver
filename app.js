@@ -704,6 +704,85 @@
     }
   }
 
+  var THEME_KEY = "wordle-solver-theme";
+  var themeToggleBtn = document.getElementById("theme-toggle");
+  var themeColorMeta = document.getElementById("theme-color-meta");
+
+  function systemPrefersDark() {
+    return (
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+    );
+  }
+
+  /** Stored preference: "light" | "dark" | null (follow system). */
+  function getThemePreference() {
+    try {
+      var pref = localStorage.getItem(THEME_KEY);
+      if (pref === "light" || pref === "dark") return pref;
+    } catch (e) {
+      /* private mode */
+    }
+    return null;
+  }
+
+  function resolveTheme() {
+    var pref = getThemePreference();
+    if (pref) return pref;
+    return systemPrefersDark() ? "dark" : "light";
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    if (themeColorMeta) {
+      themeColorMeta.content = theme === "light" ? "#eef1f6" : "#0f1419";
+    }
+    if (themeToggleBtn) {
+      var next = theme === "dark" ? "light" : "dark";
+      var pref = getThemePreference();
+      var label =
+        "Switch to " +
+        next +
+        " mode" +
+        (pref ? "" : " (currently following system)");
+      themeToggleBtn.setAttribute("aria-label", label);
+      themeToggleBtn.title = label;
+    }
+  }
+
+  function setThemePreference(theme) {
+    try {
+      if (theme === "light" || theme === "dark") {
+        localStorage.setItem(THEME_KEY, theme);
+      } else {
+        localStorage.removeItem(THEME_KEY);
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    applyTheme(resolveTheme());
+  }
+
+  function toggleTheme() {
+    setThemePreference(resolveTheme() === "dark" ? "light" : "dark");
+  }
+
+  applyTheme(resolveTheme());
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener("click", toggleTheme);
+  }
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    var onSystemThemeChange = function () {
+      if (!getThemePreference()) applyTheme(resolveTheme());
+    };
+    if (mq.addEventListener) {
+      mq.addEventListener("change", onSystemThemeChange);
+    } else if (mq.addListener) {
+      mq.addListener(onSystemThemeChange);
+    }
+  }
+
   document.getElementById("reset-btn").addEventListener("click", resetAll);
   document.getElementById("guess-submit").addEventListener("click", submitGuess);
   document.getElementById("guess-clear").addEventListener("click", clearGuessTiles);

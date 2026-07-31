@@ -1,4 +1,5 @@
-:root {
+:root,
+[data-theme="dark"] {
   --bg: #0f1419;
   --panel: #1a2332;
   --border: #2d3a4d;
@@ -14,8 +15,44 @@
   --input-bg: #0d1218;
   --row-alt: #151d28;
   --green-known: #153d28;
+  --thead-bg: #1e2a3a;
+  --table-row-border: rgba(45, 58, 77, 0.5);
+  --btn-on-accent: #041018;
+  --danger-text: #f0a0a0;
+  --focus-ring: rgba(74, 158, 255, 0.2);
+  --tile-gray: #3a3a3c;
+  --tile-gray-border: #565758;
+  --letter-hover: brightness(1.08);
   --font: "SF Mono", "Menlo", "Consolas", "Liberation Mono", monospace;
   --ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #eef1f6;
+  --panel: #ffffff;
+  --border: #cfd6e2;
+  --text: #1a2332;
+  --muted: #5c6b82;
+  --yes: #1b7a4a;
+  --yes-bg: #e3f5eb;
+  --no: #b33a3a;
+  --no-bg: #fce8e8;
+  --has: #9a7209;
+  --has-bg: #fdf3d0;
+  --accent: #2563eb;
+  --input-bg: #f4f6fa;
+  --row-alt: #f3f6fa;
+  --green-known: #d8f0e2;
+  --thead-bg: #e8edf4;
+  --table-row-border: rgba(207, 214, 226, 0.95);
+  --btn-on-accent: #ffffff;
+  --danger-text: #b33a3a;
+  --focus-ring: rgba(37, 99, 235, 0.22);
+  --tile-gray: #787c7e;
+  --tile-gray-border: #878a8c;
+  --letter-hover: brightness(0.97);
+  color-scheme: light;
 }
 
 * {
@@ -54,8 +91,56 @@ header p {
 .top-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
   margin-bottom: 1rem;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.theme-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  border-color: var(--accent);
+}
+
+.theme-toggle svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: block;
+}
+
+/* Show moon in light mode (click → dark), sun in dark mode (click → light) */
+.theme-toggle .icon-sun {
+  display: none;
+}
+.theme-toggle .icon-moon {
+  display: block;
+}
+
+[data-theme="dark"] .theme-toggle .icon-sun {
+  display: block;
+}
+[data-theme="dark"] .theme-toggle .icon-moon {
+  display: none;
 }
 
 .guess-tile.locked {
@@ -122,7 +207,7 @@ header p {
   text-transform: uppercase;
   border-radius: 8px;
   border: 2px solid var(--border);
-  background: #3a3a3c;
+  background: var(--tile-gray);
   color: var(--text);
   cursor: text;
   caret-color: var(--accent);
@@ -132,12 +217,13 @@ header p {
 .guess-tile:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .guess-tile.tile-gray {
-  background: #3a3a3c;
-  border-color: #565758;
+  background: var(--tile-gray);
+  border-color: var(--tile-gray-border);
+  color: #fff;
 }
 
 .guess-tile.tile-yellow {
@@ -207,8 +293,8 @@ header p {
 }
 
 .history-tile.tile-gray {
-  background: #3a3a3c;
-  color: var(--text);
+  background: var(--tile-gray);
+  color: #fff;
 }
 .history-tile.tile-yellow {
   background: #b59f3b;
@@ -240,7 +326,7 @@ header p {
 .known-row input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .letter-grid {
@@ -266,7 +352,7 @@ header p {
 }
 
 .letter-btn:hover {
-  filter: brightness(1.08);
+  filter: var(--letter-hover);
 }
 
 .letter-btn .ch {
@@ -388,7 +474,7 @@ input[type="number"] {
 
 .btn {
   background: var(--accent);
-  color: #041018;
+  color: var(--btn-on-accent);
   border: 0;
   border-radius: 8px;
   padding: 0.45rem 0.85rem;
@@ -409,7 +495,7 @@ input[type="number"] {
 
 .btn.danger {
   background: transparent;
-  color: #f0a0a0;
+  color: var(--danger-text);
   border: 1px solid var(--no);
 }
 
@@ -494,7 +580,7 @@ table {
 thead th {
   position: sticky;
   top: 0;
-  background: #1e2a3a;
+  background: var(--thead-bg);
   text-align: left;
   padding: 0.5rem 0.7rem;
   font-size: 0.7rem;
@@ -507,7 +593,7 @@ thead th {
 
 tbody td {
   padding: 0.35rem 0.7rem;
-  border-bottom: 1px solid rgba(45, 58, 77, 0.5);
+  border-bottom: 1px solid var(--table-row-border);
 }
 
 tbody tr:nth-child(even) {
