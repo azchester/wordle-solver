@@ -1,5 +1,5 @@
 /**
- * Unit tests against shipped filter.js + words.js (Java WordleSolver parity).
+ * Unit tests against shipped filter.js + words.js (official NYT Wordle dictionary).
  * Run: node test/filter.test.js
  */
 "use strict";
@@ -30,16 +30,16 @@ function allYes() {
   return filter.defaultConstraints();
 }
 
-test("dictionary has 12949 five-letter words (Java CSV)", function () {
-  assert.strictEqual(WORDS.length, 12949);
+test("dictionary has 14857 five-letter words (prior list + NYT additions)", function () {
+  assert.strictEqual(WORDS.length, 14857);
   for (var i = 0; i < WORDS.length; i++) {
     assert.strictEqual(WORDS[i].length, 5);
     assert.match(WORDS[i], /^[A-Z]{5}$/);
   }
 });
 
-test("dictionary includes WOMEN, NIKAU, DEATH, ASTRO, SMURF", function () {
-  ["WOMEN", "NIKAU", "DEATH", "ASTRO", "SMURF"].forEach(function (w) {
+test("dictionary includes WOMEN, NIKAU, DEATH, ASTRO, SMURF, AAPAS, CIGAR", function () {
+  ["WOMEN", "NIKAU", "DEATH", "ASTRO", "SMURF", "AAPAS", "CIGAR"].forEach(function (w) {
     assert.ok(WORDS.indexOf(w) >= 0, w);
   });
 });

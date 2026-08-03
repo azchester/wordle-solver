@@ -14,7 +14,7 @@ Open `index.html` locally or serve the folder as static files—no build step, n
 - **Letter status board** — Click A–Z to cycle **YES** (may appear) → **NO** (excluded) → **HAS** (must appear).
 - **Puzzle greens** — Manually set known letters at positions 1–5.
 - **Position exclusions** — Mark yellow-style “in the word, not here” constraints.
-- **Common words filter** — Prefer everyday vocabulary (~3k words) over the full dictionary.
+- **Common words filter** — Prefer the official NYT Wordle allowed-guess vocabulary (~14.8k words) over any local-only extras.
 - **Plural handling** — Exclude likely `-s` plurals from the main list, and optionally show them in a separate section.
 - **Minimums** — Require a minimum number of unique letters or unique vowels (A/E/I/O/U).
 - **Fill optimal** — One click copies the top-ranked word into the guess row (does not submit).
@@ -101,11 +101,13 @@ Lower `E[left]` means the guess tends to shrink the list more, averaged over equ
 
 | List | Size | Role |
 |------|------|------|
-| Full dictionary (`words.js`) | **12,949** five-letter words | All candidates the solver can propose or filter |
-| Common set (`common-words.js`) | **~3,067** | Intersection of frequent English + Wordle-style answer vocabulary |
-| Source data | `data/google-20k.txt`, `data/wordle-answers.txt` | Inputs used to build the common-word set |
+| Full dictionary (`words.js`) | **14,857** five-letter words | Prior dictionary plus all official NYT Wordle valid guesses (additive) |
+| Common set (`common-words.js`) | **~14,856** | Prior common set plus **all** official NYT Wordle allowed guesses |
+| Source data | `data/wordle-allowed.txt`, `data/wordle-answers.txt`, `data/google-20k.txt` | Full valid list, answer-list source, frequency list |
 
-**Common words only** (default on) keeps the main table focused on words more likely to be real answers or strong human guesses, while the full dictionary remains available when the toggle is off.
+The dictionary is **additive**: existing words are kept, and any missing official NYT Wordle entries (current web game allowed guesses + answers) are added. That includes the full NYT valid-guess pool plus any prior extras still useful locally.
+
+**Common words only** (default on) keeps the main table focused on official NYT Wordle allowed guesses (plus any prior common extras). Turn the toggle off to include local-only dictionary words that are not in the NYT list.
 
 **Plurals** are detected heuristically: five-letter words ending in a single `S`, excluding endings like `-ss`, `-us`, and `-is` (e.g. glass, focus, basis).
 
@@ -119,11 +121,12 @@ wordle-solver/
 ├── styles.css          # Layout and tile / status styling
 ├── app.js              # UI state, event wiring, rendering
 ├── filter.js           # Pure filter + scoring + applyGuess (shared with tests)
-├── words.js            # Full 12,949-word dictionary
+├── words.js            # Full 14,857-word dictionary (prior + NYT)
 ├── common-words.js     # COMMON_WORDS + COMMON_SET map
 ├── data/
-│   ├── google-20k.txt      # Frequency list source
-│   └── wordle-answers.txt  # Answer-list source
+│   ├── google-20k.txt       # Frequency list source
+│   ├── wordle-allowed.txt   # Full valid-guess list (prior + NYT)
+│   └── wordle-answers.txt   # Answer-list source
 └── test/
     ├── filter.test.js
     ├── guess.test.js
@@ -186,7 +189,7 @@ Everything runs **entirely in your browser**. No network calls are made by the a
 - Ranking is **one ply** (looks one guess ahead), not a full multi-step search tree.
 - On large remaining sets, scoring may sample a subset of guess words for responsiveness.
 - Plural detection is heuristic, not a full morphological analyzer.
-- “Common words” is a curated intersection of lists, not a guarantee of official daily-answer eligibility.
+- “Common words” includes all official NYT allowed guesses; it is not limited to the smaller daily-answer pool.
 
 ---
 
