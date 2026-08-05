@@ -28,12 +28,13 @@ function test(name, fn) {
   }
 }
 
-test("common set loaded and non-empty", function () {
-  assert.ok(common.COMMON_WORDS.length > 14000);
+test("common set is official NYT answer list", function () {
+  assert.strictEqual(common.COMMON_WORDS.length, 2315);
   assert.ok(COMMON_SET.DEATH);
   assert.ok(COMMON_SET.ABOUT);
-  assert.ok(COMMON_SET.NIKAU); // NYT allowed guess → common
-  assert.ok(COMMON_SET.AAPAS); // NYT allowed guess → common
+  assert.ok(COMMON_SET.ABACK);
+  assert.ok(!COMMON_SET.NIKAU); // NYT allowed guess, not an answer
+  assert.ok(!COMMON_SET.AAPAS); // NYT allowed guess, not an answer
   assert.ok(!COMMON_SET.SMURF); // local-only dict word, not NYT
 });
 
@@ -58,9 +59,11 @@ test("commonOnly filters to common set", function () {
   assert.ok(rows.some(function (r) {
     return r.word === "DEATH";
   }));
-  assert.ok(rows.some(function (r) {
-    return r.word === "NIKAU";
-  }));
+  assert.ok(
+    !rows.some(function (r) {
+      return r.word === "NIKAU"; // allowed guess only
+    })
+  );
   assert.ok(
     !rows.some(function (r) {
       return r.word === "SMURF";
@@ -94,7 +97,8 @@ test("common + exclude plurals default UI combo", function () {
   c.commonOnly = true;
   c.excludePlurals = true;
   var rows = filter.filterWords(WORDS, c, COMMON_SET);
-  assert.ok(rows.length > 500);
+  assert.ok(rows.length > 2000);
+  assert.ok(rows.length <= 2315);
   assert.ok(rows.length < WORDS.length);
   rows.forEach(function (r) {
     assert.ok(COMMON_SET[r.word]);

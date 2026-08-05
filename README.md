@@ -10,11 +10,11 @@ Open `index.html` locally or serve the folder as static files—no build step, n
 
 - **Guess entry** — Type a 5-letter word, click tiles to cycle gray → yellow → green, then submit. Confirmed greens auto-fill on the next guess.
 - **Guess history** — Submitted guesses stay visible with their tile colors.
-- **Optimal ranking** — Candidates sorted by expected remaining list size (`E[left]`); entropy breaks ties.
+- **Hybrid ranking** — Opening guess maximizes information over the full allowed list; later guesses rank remaining approved answers only (`E[left]` + entropy).
 - **Letter status board** — Click A–Z to cycle **YES** (may appear) → **NO** (excluded) → **HAS** (must appear).
 - **Puzzle greens** — Manually set known letters at positions 1–5.
 - **Position exclusions** — Mark yellow-style “in the word, not here” constraints.
-- **Common words filter** — Prefer the official NYT Wordle allowed-guess vocabulary (~14.8k words) over any local-only extras.
+- **Answers-only filter** — Prefer the official NYT Wordle answer list (~2.3k words). Turn off to include the full allowed-guess dictionary.
 - **Plural handling** — Exclude likely `-s` plurals from the main list, and optionally show them in a separate section.
 - **Minimums** — Require a minimum number of unique letters or unique vowels (A/E/I/O/U).
 - **Fill optimal** — One click copies the top-ranked word into the guess row (does not submit).
@@ -60,7 +60,7 @@ You do not have to enter every guess as tiles. You can also:
 | **Puzzle (known greens)** | Lock a letter into a fixed slot |
 | **Letter status** | Force YES / NO / HAS for any letter |
 | **Position exclusion** | Require a HAS letter *not* at a given index |
-| **Word list filters** | Common-only, exclude plurals, show plurals separately |
+| **Word list filters** | NYT answers only, exclude plurals, show plurals separately |
 | **Minimums** | Prefer high-diversity or multi-vowel probes |
 
 ### Guess → filter merge rules
@@ -79,7 +79,14 @@ This matches standard Wordle multi-letter handling: a gray tile never fully excl
 
 ## How ranking works
 
-The app ranks remaining answers with a **one-ply partition score**:
+The app uses a **hybrid strategy**:
+
+| Stage | Guess pool | Secret / score set |
+|-------|------------|--------------------|
+| **Opening** (greenfield: no guesses, no letter constraints) | Full allowed dictionary (~14.8k), 5-unique-letter probes | NYT answers (or filtered remaining) |
+| **Solve** (after first guess or any constraint) | Remaining approved candidates only | Same candidate set |
+
+Both stages use a **one-ply partition score**:
 
 1. For each candidate guess `g` and every remaining possible answer `a`, compute the Wordle color pattern of `g` vs `a` (including correct handling of duplicate letters).
 2. Group remaining answers into buckets by pattern (at most \(3^5 = 243\) patterns).
@@ -93,7 +100,9 @@ Lower `E[left]` means the guess tends to shrink the list more, averaged over equ
 
 **Tie-break:** higher **entropy** of the feedback partition (bits of information).
 
-**Performance note:** When the remaining set is very large, only a prioritized subset of guesses (preferring high unique-letter counts) is fully scored against every remaining answer so the UI stays responsive. Unscored rows sort after fully scored ones.
+Opening probes that are not official answers are labeled **probe** in the UI. The first open-board ranking is cached so the ~1s full-dictionary scan only runs once per answer set.
+
+**Performance note (solve mode):** When the remaining set is very large, only a prioritized subset of guesses (preferring high unique-letter counts) is fully scored against every remaining answer so the UI stays responsive. Unscored rows sort after fully scored ones.
 
 ---
 
@@ -102,12 +111,12 @@ Lower `E[left]` means the guess tends to shrink the list more, averaged over equ
 | List | Size | Role |
 |------|------|------|
 | Full dictionary (`words.js`) | **14,857** five-letter words | Prior dictionary plus all official NYT Wordle valid guesses (additive) |
-| Common set (`common-words.js`) | **~14,856** | Prior common set plus **all** official NYT Wordle allowed guesses |
-| Source data | `data/wordle-allowed.txt`, `data/wordle-answers.txt`, `data/google-20k.txt` | Full valid list, answer-list source, frequency list |
+| Answer set (`common-words.js`) | **2,315** | Official NYT Wordle **answer** list only (from `data/wordle-answers.txt`) |
+| Source data | `data/wordle-allowed.txt`, `data/wordle-answers.txt`, `data/google-20k.txt` | Full valid-guess list, answer list, frequency list |
 
-The dictionary is **additive**: existing words are kept, and any missing official NYT Wordle entries (current web game allowed guesses + answers) are added. That includes the full NYT valid-guess pool plus any prior extras still useful locally.
+The full dictionary remains the union of prior words and the official NYT valid-guess pool (allowed guesses + answers). Scoring and guesses can still use that larger pool when needed.
 
-**Common words only** (default on) keeps the main table focused on official NYT Wordle allowed guesses (plus any prior common extras). Turn the toggle off to include local-only dictionary words that are not in the NYT list.
+**NYT answers only** (default on) keeps the main table focused on the official answer list (~2.3k). Turn the toggle off to include the full allowed-guess dictionary (~14.8k) and any local-only extras.
 
 **Plurals** are detected heuristically: five-letter words ending in a single `S`, excluding endings like `-ss`, `-us`, and `-is` (e.g. glass, focus, basis).
 
@@ -121,16 +130,17 @@ wordle-solver/
 ├── styles.css          # Layout and tile / status styling
 ├── app.js              # UI state, event wiring, rendering
 ├── filter.js           # Pure filter + scoring + applyGuess (shared with tests)
-├── words.js            # Full 14,857-word dictionary (prior + NYT)
-├── common-words.js     # COMMON_WORDS + COMMON_SET map
+├── words.js            # Full 14,857-word dictionary (prior + NYT guesses)
+├── common-words.js     # COMMON_WORDS + COMMON_SET (NYT answers only)
 ├── data/
 │   ├── google-20k.txt       # Frequency list source
 │   ├── wordle-allowed.txt   # Full valid-guess list (prior + NYT)
-│   └── wordle-answers.txt   # Answer-list source
+│   └── wordle-answers.txt   # Official answer list source
 └── test/
     ├── filter.test.js
     ├── guess.test.js
     ├── guess-ui.test.js
+    ├── opener.test.js
     ├── row-guess.test.js
     └── word-class.test.js
 ```
@@ -160,6 +170,7 @@ node test/guess.test.js
 node test/guess-ui.test.js
 node test/row-guess.test.js
 node test/word-class.test.js
+node test/opener.test.js
 ```
 
 Or:
@@ -189,7 +200,7 @@ Everything runs **entirely in your browser**. No network calls are made by the a
 - Ranking is **one ply** (looks one guess ahead), not a full multi-step search tree.
 - On large remaining sets, scoring may sample a subset of guess words for responsiveness.
 - Plural detection is heuristic, not a full morphological analyzer.
-- “Common words” includes all official NYT allowed guesses; it is not limited to the smaller daily-answer pool.
+- With **NYT answers only** on (default), the candidate table uses the ~2.3k answer list. Turn it off for the full ~14.8k allowed-guess dictionary.
 
 ---
 

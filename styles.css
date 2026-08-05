@@ -600,6 +600,11 @@ tbody tr:nth-child(even) {
   background: var(--row-alt);
 }
 
+tr.probe-guess td.word {
+  color: var(--muted);
+  font-style: italic;
+}
+
 td.word {
   font-weight: 700;
   letter-spacing: 0.08em;

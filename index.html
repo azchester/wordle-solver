@@ -34,7 +34,7 @@
       <header>
         <h1>Wordle Solver</h1>
         <p>
-          Wordle helper: guess entry, letter filters, common-word list, plural
+          Wordle helper: guess entry, letter filters, NYT answers list, plural
           segregation, and expected-remaining ranking.
         </p>
         <div class="top-actions" id="top-actions">
@@ -150,13 +150,14 @@
           <section class="panel" aria-labelledby="class-heading">
             <h2 id="class-heading">Word list filters</h2>
             <p class="hint">
-              Common ≈ Wordle answers + frequent English (Google 20k). Plurals ≈
-              likely -s forms (not -ss/-us/-is).
+              Answers only ≈ official NYT Wordle solution list (~2.3k). Off =
+              full allowed-guess dictionary. Plurals ≈ likely -s forms (not
+              -ss/-us/-is).
             </p>
             <div class="class-toggles">
               <label class="check-label">
                 <input type="checkbox" id="toggle-common-only" checked />
-                Common words only
+                NYT answers only
               </label>
               <label class="check-label">
                 <input type="checkbox" id="toggle-exclude-plurals" checked />
@@ -198,10 +199,9 @@
           <section class="panel" aria-labelledby="weight-heading">
             <h2 id="weight-heading">Ranking</h2>
             <p class="hint" id="ranking-hint">
-              Ranked by <strong>expected remaining candidates</strong> after the
-              Wordle color pattern (lower is better). Tie-break: entropy
-              (bits). On very large lists only the top ~1000 high-unique
-              guesses are fully scored against all remaining answers.
+              Opening guess uses the full allowed list for max information;
+              later guesses rank remaining approved candidates only (lower
+              E[left] is better).
             </p>
             <!-- legacy weight controls kept hidden for API compatibility -->
             <input type="hidden" id="freq-weight" value="65" />

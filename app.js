@@ -19,7 +19,7 @@
   }
 
   var state = filter.defaultConstraints();
-  // UI defaults: common words only, plurals out of main list
+  // UI defaults: NYT answers only, plurals out of main list
   state.commonOnly = true;
   state.excludePlurals = true;
   state.requirePlural = false;
@@ -27,9 +27,11 @@
   var knownInputs = [];
   var letterButtons = Object.create(null);
   var resultsCache = [];
+  var candidatesCache = []; // remaining answers (may differ from ranked probes in opener mode)
   var pluralsCache = [];
   var optimalIndex = 0;
   var guessHistory = [];
+  var playMode = "solve"; // 'opener' | 'solve'
   var guessTiles = []; // { input, status }
   var pendingTileStatuses = ["gray", "gray", "gray", "gray", "gray"];
 
@@ -186,11 +188,20 @@
       var r = rows[i];
       var tr = document.createElement("tr");
       tr.setAttribute("data-word", r.word);
+      var wordLabel = r.word;
+      var wordTitle = "";
+      if (playMode === "opener" && r.common === false) {
+        wordLabel = r.word + " · probe";
+        wordTitle = ' title="Allowed guess for information; not an official NYT answer"';
+        tr.className = "probe-guess";
+      }
       tr.innerHTML =
         '<td class="num score">' +
         formatExpected(r.score) +
-        '</td><td class="word">' +
-        r.word +
+        '</td><td class="word"' +
+        wordTitle +
+        ">" +
+        wordLabel +
         '</td><td class="num">' +
         r.unique +
         '</td><td class="num">' +
@@ -218,11 +229,18 @@
       prefillGuessTilesFromKnown();
     }
 
-    // Main list: letter filters + class filters (common / exclude plurals)
-    resultsCache = filter.filterScoreWords(words, state, commonSet);
+    // Hybrid ranking:
+    //  - greenfield (no guesses / constraints): best info probe from full dict
+    //  - after that: only remaining approved candidates (NYT answers when toggle on)
+    var ranked = filter.rankForPlay(words, state, commonSet, {
+      hasHistory: guessHistory.length > 0,
+    });
+    playMode = ranked.mode;
+    resultsCache = ranked.rankedGuesses;
+    candidatesCache = ranked.candidates;
     optimalIndex = 0;
 
-    // Segregated plurals (same letter filters; plurals only; respect common-only)
+    // Segregated plurals (solve-mode scoring only; same letter filters)
     var showPlurals = !!(toggleShowPlurals && toggleShowPlurals.checked);
     if (showPlurals) {
       var pluralConstraints = filter.cloneConstraints(state);
@@ -237,7 +255,7 @@
       pluralsCache = [];
     }
 
-    var rem = resultsCache.length;
+    var rem = ranked.answerCount;
     var remPlurals = pluralsCache.length;
     // Stats vs full dictionary letter-filter only (no class filters)
     var letterOnly = filter.cloneConstraints(state);
@@ -254,7 +272,7 @@
       : 0;
     remainingEl.textContent =
       rem.toLocaleString() +
-      " main" +
+      " answers" +
       (showPlurals ? " + " + remPlurals.toLocaleString() + " plurals" : "") +
       " (" +
       pctRem +
@@ -263,26 +281,51 @@
       (words.length - letterMatchCount).toLocaleString() +
       " letter-filtered out · " +
       (letterMatchCount - rem - (showPlurals ? remPlurals : 0)).toLocaleString() +
-      " class-filtered from main";
+      " class-filtered from answers";
 
     if (listModeHint) {
       var bits = [];
-      if (state.commonOnly) bits.push("common only");
-      else bits.push("all rarity");
-      if (state.excludePlurals) bits.push("plurals excluded from main");
+      if (playMode === "opener") {
+        bits.push("opening probe (full allowed list for max info)");
+      } else {
+        bits.push("solve mode (approved candidates only)");
+      }
+      if (state.commonOnly) bits.push("answers only after opener");
+      else bits.push("full dictionary candidates");
+      if (state.excludePlurals) bits.push("plurals excluded from answers");
       if (showPlurals) bits.push("plurals shown separately");
       listModeHint.textContent =
         bits.join(" · ") +
         (commonSet
           ? " · " +
             (window.COMMON_WORDS ? window.COMMON_WORDS.length.toLocaleString() : "?") +
-            " common words loaded"
-          : " · common list missing");
+            " answer words loaded"
+          : " · answer list missing");
+    }
+
+    var rankingHint = document.getElementById("ranking-hint");
+    if (rankingHint) {
+      if (playMode === "opener") {
+        rankingHint.innerHTML =
+          "Opening guess: ranked by <strong>expected remaining answers</strong> " +
+          "using the full allowed-guess dictionary for maximum information " +
+          "(lower is better). Words marked <em>probe</em> are valid guesses " +
+          "but not official answers. After your first guess, ranking switches " +
+          "to the approved answer list only.";
+      } else {
+        rankingHint.innerHTML =
+          "Ranked by <strong>expected remaining candidates</strong> after the " +
+          "Wordle color pattern (lower is better). Tie-break: entropy " +
+          "(bits). Guesses are drawn only from remaining approved candidates.";
+      }
     }
 
     updateOptimalDisplay();
 
-    var leaders = filter.positionLeaders(resultsCache);
+    // Position leaders from remaining answers, not probe ranking
+    var leaders = filter.positionLeaders(
+      playMode === "opener" ? candidatesCache : resultsCache
+    );
     leadersEl.innerHTML = leaders
       .map(function (L, i) {
         var pct = rem ? Math.round((L.count / rem) * 100) : 0;
@@ -302,7 +345,7 @@
 
     renderResultsTable(tbody, resultsCache);
 
-    if (resultsCache.length === 0) {
+    if (rem === 0) {
       emptyEl.hidden = false;
       emptyEl.textContent = "No words match these constraints.";
     } else if (resultsCache.length > MAX_ROWS) {
@@ -312,7 +355,10 @@
         MAX_ROWS +
         " of " +
         resultsCache.length.toLocaleString() +
-        " (lowest expected remaining). Narrow filters to see more.";
+        (playMode === "opener"
+          ? " opening probes"
+          : " candidates") +
+        " (lowest expected remaining).";
     } else {
       emptyEl.hidden = true;
     }
@@ -360,7 +406,13 @@
     if (optimalIndex >= resultsCache.length) optimalIndex = 0;
     var r = resultsCache[optimalIndex];
     optimalWordEl.textContent = r.word;
-    optimalScoreEl.textContent = formatExpected(r.score);
+    var scoreTxt = formatExpected(r.score);
+    if (playMode === "opener" && r.common === false) {
+      scoreTxt += " · probe";
+    } else if (playMode === "opener") {
+      scoreTxt += " · opener";
+    }
+    optimalScoreEl.textContent = scoreTxt;
   }
 
   function applyStateToControls() {

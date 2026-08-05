@@ -337,76 +337,195 @@
   }
 
   /**
-   * Score remaining words by expected remaining size after the guess
-   * (partition / information-theoretic one-ply). Lower score is better.
-   *
-   * score = E[|remaining|] = sum(bucket^2) / |S|
-   * Also attaches entropy (bits) as a tie-break preference.
-   *
-   * Guesses are always evaluated against the full remaining answer set S.
-   * When |S| is large, only a prioritized subset of guesses is fully scored
-   * (high unique-letter count first) so the UI stays responsive; unscored
-   * words sort after with a worst-case score.
-   *
-   * @returns {{ word, unique, uniqueVowels, vowels, score, expectedRemaining, entropy }[]}
+   * True when no letter/position constraints have been applied yet (open board).
+   * Class filters (answers-only, plurals) and min-unique thresholds do not count.
    */
-  function scoreAndSort(filtered) {
-    var n = filtered.length;
-    if (n === 0) return [];
-
-    var answerWords = new Array(n);
+  function isGreenfield(constraints) {
+    var c = constraints || defaultConstraints();
+    var known = c.known || [];
     var i;
-    for (i = 0; i < n; i++) {
-      answerWords[i] = filtered[i].word;
+    for (i = 0; i < 5; i++) {
+      if (known[i]) return false;
     }
-
-    // Full O(n^2) when small; otherwise evaluate top prioritized guesses only.
-    var FULL_LIMIT = 1800;
-    var MAX_GUESS_EVAL = 1000;
-    var guessIndices = [];
-    if (n <= FULL_LIMIT) {
-      for (i = 0; i < n; i++) guessIndices.push(i);
-    } else {
-      var order = [];
-      for (i = 0; i < n; i++) {
-        order.push({ i: i, u: filtered[i].unique, w: filtered[i].word });
+    if ((c.contains && c.contains.length) || (c.excludes && c.excludes.length)) {
+      return false;
+    }
+    if (c.positionExclusions && c.positionExclusions.length) return false;
+    var statuses = c.statuses;
+    if (statuses) {
+      for (i = 0; i < LETTERS.length; i++) {
+        var st = statuses[LETTERS[i]];
+        if (st && st !== "YES") return false;
       }
-      order.sort(function (a, b) {
-        if (b.u !== a.u) return b.u - a.u;
-        if (a.w < b.w) return -1;
-        if (a.w > b.w) return 1;
-        return 0;
-      });
-      var take = Math.min(MAX_GUESS_EVAL, n);
-      for (i = 0; i < take; i++) guessIndices.push(order[i].i);
     }
+    return true;
+  }
 
-    var scoredByIndex = new Array(n);
+  function compareScoredRows(a, b) {
+    if (a.score !== b.score) return a.score - b.score;
+    if (b.entropy !== a.entropy) return b.entropy - a.entropy;
+    if (b.unique !== a.unique) return b.unique - a.unique;
+    if (a.word < b.word) return -1;
+    if (a.word > b.word) return 1;
+    return 0;
+  }
+
+  function hashWordList(words) {
+    var h = 2166136261;
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i];
+      for (var j = 0; j < w.length; j++) {
+        h ^= w.charCodeAt(j);
+        h = Math.imul(h, 16777619);
+      }
+      h ^= 0x7f;
+      h = Math.imul(h, 16777619);
+    }
+    return words.length + ":" + (h >>> 0);
+  }
+
+  /**
+   * Score an arbitrary guess pool against a fixed answer set S.
+   * Lower expectedRemaining is better (one-ply partition score).
+   *
+   * `guessPool` may be string[] or row objects with at least `{ word }`
+   * (optional unique/uniqueVowels/vowels/common/plural preserved when present).
+   *
+   * When |guessPool| is large, only a prioritized subset is fully scored
+   * (high unique-letter count first). Unscored guesses sort last.
+   *
+   * @param {Array<string|object>} guessPool
+   * @param {string[]} answerWords
+   * @param {object} [opts]
+   * @param {number} [opts.maxGuessEval] max fully scored guesses (default 1000)
+   * @param {number} [opts.minUniqueForProbe] skip guesses with fewer unique letters (default 0)
+   * @param {Object|null} [opts.commonSet]
+   * @param {boolean} [opts.markProbe] tag rows with probe:true
+   * @returns {{ word, unique, uniqueVowels, vowels, common, plural, score, expectedRemaining, entropy, probe? }[]}
+   */
+  function scoreGuessPool(guessPool, answerWords, opts) {
+    opts = opts || {};
+    var answers = answerWords || [];
+    var nAns = answers.length;
+    if (!guessPool || !guessPool.length) return [];
+    if (nAns === 0) return [];
+
+    var maxEval =
+      opts.maxGuessEval === undefined || opts.maxGuessEval === null
+        ? 1000
+        : opts.maxGuessEval | 0;
+    if (maxEval < 1) maxEval = 1;
+    var minUnique = opts.minUniqueForProbe | 0;
+    var commonSet = opts.commonSet || null;
+    var markProbe = !!opts.markProbe;
+    var hasCommonSet = !!commonSet;
+
+    var pool = [];
+    var i;
+    for (i = 0; i < guessPool.length; i++) {
+      var item = guessPool[i];
+      var raw;
+      var uniq;
+      var uVow;
+      var vows;
+      var isCommon;
+      var isPlural;
+      if (item && typeof item === "object") {
+        raw = String(item.word || "")
+          .toUpperCase()
+          .replace(/[^A-Z]/g, "");
+        if (raw.length !== 5) continue;
+        uniq =
+          item.unique != null ? item.unique | 0 : uniqueLetterCount(raw);
+        uVow =
+          item.uniqueVowels != null
+            ? item.uniqueVowels | 0
+            : uniqueVowelCount(raw);
+        vows =
+          item.vowels != null ? item.vowels | 0 : vowelOccurrenceCount(raw);
+        isCommon =
+          item.common != null
+            ? !!item.common
+            : isCommonWord(raw, commonSet);
+        isPlural =
+          item.plural != null ? !!item.plural : isLikelyPlural(raw);
+      } else {
+        raw = String(item || "")
+          .toUpperCase()
+          .replace(/[^A-Z]/g, "");
+        if (raw.length !== 5) continue;
+        uniq = uniqueLetterCount(raw);
+        uVow = uniqueVowelCount(raw);
+        vows = vowelOccurrenceCount(raw);
+        isCommon = isCommonWord(raw, commonSet);
+        isPlural = isLikelyPlural(raw);
+      }
+      if (minUnique && uniq < minUnique) continue;
+      pool.push({
+        word: raw,
+        unique: uniq,
+        uniqueVowels: uVow,
+        vowels: vows,
+        common: hasCommonSet ? isCommon : isCommon,
+        plural: isPlural,
+      });
+    }
+    if (!pool.length) return [];
+
+    // Prioritize high unique-letter guesses for evaluation budget.
+    var order = pool.map(function (row, idx) {
+      return { i: idx, u: row.unique, w: row.word };
+    });
+    order.sort(function (a, b) {
+      if (b.u !== a.u) return b.u - a.u;
+      if (a.w < b.w) return -1;
+      if (a.w > b.w) return 1;
+      return 0;
+    });
+    var take = Math.min(maxEval, order.length);
+    var evalSet = Object.create(null);
+    for (i = 0; i < take; i++) evalSet[order[i].i] = true;
+
     var buckets = new Int32Array(243);
-    var invN = 1 / n;
+    var invN = 1 / nAns;
     var log2 = Math.log(2);
-    var scoredSet = Object.create(null);
+    var scored = new Array(pool.length);
 
-    for (var g = 0; g < guessIndices.length; g++) {
-      var gi = guessIndices[g];
-      var guess = answerWords[gi];
+    for (i = 0; i < pool.length; i++) {
+      var row = pool[i];
+      if (!evalSet[i]) {
+        scored[i] = {
+          word: row.word,
+          unique: row.unique,
+          uniqueVowels: row.uniqueVowels,
+          vowels: row.vowels,
+          common: row.common,
+          plural: row.plural,
+          score: nAns,
+          expectedRemaining: nAns,
+          entropy: 0,
+        };
+        if (markProbe) scored[i].probe = true;
+        continue;
+      }
       buckets.fill(0);
-      for (i = 0; i < n; i++) {
-        buckets[feedbackId(guess, answerWords[i])]++;
+      var g;
+      for (g = 0; g < nAns; g++) {
+        buckets[feedbackId(row.word, answers[g])]++;
       }
       var sumSq = 0;
       var entropy = 0;
-      for (i = 0; i < 243; i++) {
-        var c = buckets[i];
+      var b;
+      for (b = 0; b < 243; b++) {
+        var c = buckets[b];
         if (!c) continue;
         sumSq += c * c;
         var p = c * invN;
         entropy -= p * (Math.log(p) / log2);
       }
       var expected = sumSq * invN;
-      var row = filtered[gi];
-      scoredByIndex[gi] = {
-        word: guess,
+      scored[i] = {
+        word: row.word,
         unique: row.unique,
         uniqueVowels: row.uniqueVowels,
         vowels: row.vowels,
@@ -416,40 +535,110 @@
         expectedRemaining: expected,
         entropy: entropy,
       };
-      scoredSet[gi] = true;
+      if (markProbe) scored[i].probe = true;
     }
 
-    // Unscored (large-n only): place after real scores
-    for (i = 0; i < n; i++) {
-      if (scoredSet[i]) continue;
-      row = filtered[i];
-      scoredByIndex[i] = {
-        word: row.word,
-        unique: row.unique,
-        uniqueVowels: row.uniqueVowels,
-        vowels: row.vowels,
-        common: row.common,
-        plural: row.plural,
-        score: n,
-        expectedRemaining: n,
-        entropy: 0,
-      };
-    }
-
-    var scored = scoredByIndex;
-    scored.sort(function (a, b) {
-      if (a.score !== b.score) return a.score - b.score;
-      if (b.entropy !== a.entropy) return b.entropy - a.entropy;
-      if (b.unique !== a.unique) return b.unique - a.unique;
-      if (a.word < b.word) return -1;
-      if (a.word > b.word) return 1;
-      return 0;
-    });
+    scored.sort(compareScoredRows);
     return scored;
   }
 
   /**
-   * Filter + partition-score + sort (main entry used by UI).
+   * Score remaining candidate words against themselves (solve mode).
+   * When |S| is large, only a prioritized subset is fully scored.
+   *
+   * @returns {{ word, unique, uniqueVowels, vowels, score, expectedRemaining, entropy }[]}
+   */
+  function scoreAndSort(filtered) {
+    var n = filtered.length;
+    if (n === 0) return [];
+    var answerWords = new Array(n);
+    var i;
+    for (i = 0; i < n; i++) answerWords[i] = filtered[i].word;
+
+    // Full O(n^2) when small; otherwise evaluate top prioritized guesses only.
+    var FULL_LIMIT = 1800;
+    var MAX_GUESS_EVAL = n <= FULL_LIMIT ? n : 1000;
+    return scoreGuessPool(filtered, answerWords, {
+      maxGuessEval: MAX_GUESS_EVAL,
+      markProbe: false,
+    });
+  }
+
+  // Cache full-dictionary opener ranking (expensive; only depends on answer set).
+  var openerRankCache = Object.create(null);
+
+  /**
+   * Hybrid ranking for play:
+   *  - Greenfield (open board): rank any allowed guess for max information
+   *    against the remaining answer set (probe / opener mode).
+   *  - Otherwise: rank only remaining approved candidates against themselves
+   *    (solve mode).
+   *
+   * @param {string[]} words full dictionary (used as probe pool)
+   * @param {object} constraints
+   * @param {Object|null} commonSet
+   * @param {object} [options]
+   * @param {boolean} [options.forceSolve] skip opener mode even if greenfield
+   * @param {boolean} [options.hasHistory] treat as not greenfield when true
+   * @returns {{
+   *   mode: 'opener'|'solve',
+   *   rankedGuesses: object[],
+   *   candidates: object[],
+   *   answerCount: number
+   * }}
+   */
+  function rankForPlay(words, constraints, commonSet, options) {
+    options = options || {};
+    var filtered = filterWords(words, constraints, commonSet);
+    var answerWords = filtered.map(function (r) {
+      return r.word;
+    });
+    var answerCount = answerWords.length;
+    var greenfield =
+      !options.forceSolve &&
+      !options.hasHistory &&
+      isGreenfield(constraints);
+
+    if (!greenfield || !words || !words.length || answerCount === 0) {
+      var solveRanked = scoreAndSort(filtered);
+      return {
+        mode: "solve",
+        rankedGuesses: solveRanked,
+        candidates: solveRanked,
+        answerCount: answerCount,
+      };
+    }
+
+    // Opener mode: score full allowed dictionary against answer list.
+    // Prefer 5-unique-letter probes; evaluate all of them (~9k) for quality.
+    var cacheKey = hashWordList(answerWords);
+    var cached = openerRankCache[cacheKey];
+    var ranked;
+    if (cached) {
+      ranked = cached;
+    } else {
+      ranked = scoreGuessPool(words, answerWords, {
+        // All 5-distinct-letter guesses (~9k); ~1–1.5s first time, then cached.
+        maxGuessEval: 10000,
+        minUniqueForProbe: 5,
+        commonSet: commonSet,
+        markProbe: true,
+      });
+      openerRankCache[cacheKey] = ranked;
+    }
+
+    return {
+      mode: "opener",
+      rankedGuesses: ranked,
+      candidates: filtered,
+      answerCount: answerCount,
+    };
+  }
+
+  /**
+   * Filter + partition-score + sort (main entry used by UI / tests).
+   * Solve-mode only (candidates ranked against themselves).
+   * For hybrid opener/solve play, use rankForPlay.
    * @param {Object|null} [commonSet]
    */
   function filterScoreWords(words, constraints, commonSet) {
@@ -733,7 +922,10 @@
     feedbackId: feedbackId,
     expectedRemaining: expectedRemaining,
     partitionEntropy: partitionEntropy,
+    isGreenfield: isGreenfield,
+    scoreGuessPool: scoreGuessPool,
     scoreAndSort: scoreAndSort,
+    rankForPlay: rankForPlay,
     filterScoreWords: filterScoreWords,
     applyGuess: applyGuess,
     positionLeaders: positionLeaders,
