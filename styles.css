@@ -209,10 +209,11 @@ header p {
   border: 2px solid var(--border);
   background: var(--tile-gray);
   color: var(--text);
-  cursor: pointer;
-  /* No visible caret/selection chrome — tiles are click-to-cycle + type */
-  caret-color: transparent;
+  /* text cursor + visible caret so tiles still feel typeable */
+  cursor: text;
+  caret-color: var(--accent);
   padding: 0;
+  /* selection still blocked in JS; hide residual highlight if any */
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;

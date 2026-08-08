@@ -473,9 +473,12 @@
     tile.input.setAttribute("data-tile-status", st);
     tile.input.setAttribute("data-locked", locked ? "1" : "0");
     tile.input.readOnly = locked;
+    var hasLetter = !!normalizeKnownChar(tile.input.value);
     tile.input.title = locked
       ? "Confirmed green (from puzzle)"
-      : "Click to cycle status (" + st + ")";
+      : hasLetter
+        ? "Click to cycle status (" + st + ")"
+        : "Type a letter, then click to set color";
   }
 
   /**
@@ -577,6 +580,13 @@
   }
 
   function cycleTileStatus(idx) {
+    // Only color tiles that have a letter — empty cells stay gray
+    var letter = normalizeKnownChar(
+      guessTiles[idx] && guessTiles[idx].input
+        ? guessTiles[idx].input.value
+        : ""
+    );
+    if (!letter) return;
     var cur = pendingTileStatuses[idx];
     var i = TILE_CYCLE.indexOf(cur);
     pendingTileStatuses[idx] = TILE_CYCLE[(i + 1) % TILE_CYCLE.length];
@@ -630,14 +640,33 @@
       input.addEventListener("keydown", function (e) {
         var el = e.target;
         var idx = Number(el.dataset.index);
-        if (state.known && state.known[idx] && e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+        // Type/replace letters without relying on native text selection
+        if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
           e.preventDefault();
+          if (state.known && state.known[idx]) return;
+          var ch = normalizeKnownChar(e.key);
+          el.value = ch;
+          paintGuessTile(idx);
+          if (ch && idx < 4) {
+            var n = idx + 1;
+            while (n < 5 && state.known && state.known[n]) n++;
+            if (n < 5) guessTiles[n].input.focus();
+          }
           return;
         }
-        if (e.key === "Backspace" && !el.value && idx > 0) {
-          var p = idx - 1;
-          while (p > 0 && state.known && state.known[p]) p--;
-          guessTiles[p].input.focus();
+        if (e.key === "Backspace") {
+          if (el.value && !(state.known && state.known[idx])) {
+            e.preventDefault();
+            el.value = "";
+            pendingTileStatuses[idx] = "gray";
+            paintGuessTile(idx);
+            return;
+          }
+          if (!el.value && idx > 0) {
+            var p = idx - 1;
+            while (p > 0 && state.known && state.known[p]) p--;
+            guessTiles[p].input.focus();
+          }
         }
         if (e.key === "Enter") {
           e.preventDefault();
