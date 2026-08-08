@@ -583,6 +583,21 @@
     paintGuessTile(idx);
   }
 
+  /** Collapse text selection in a guess tile (inputs ignore user-select CSS). */
+  function clearTileSelection(el) {
+    try {
+      var len = el.value ? el.value.length : 0;
+      if (typeof el.setSelectionRange === "function") {
+        el.setSelectionRange(len, len);
+      } else {
+        el.selectionStart = len;
+        el.selectionEnd = len;
+      }
+    } catch (err) {
+      /* ignore */
+    }
+  }
+
   function initGuessTiles() {
     var row = document.getElementById("guess-tiles");
     for (var i = 0; i < 5; i++) {
@@ -643,9 +658,43 @@
       });
       // Click cycles tile color (gray → yellow → green). Type to enter letters.
       input.addEventListener("click", function (e) {
-        var idx = Number(e.target.dataset.index);
+        var el = e.target;
+        var idx = Number(el.dataset.index);
         // Still allow color cycling on locked greens (usually already green)
         cycleTileStatus(idx);
+        clearTileSelection(el);
+      });
+      // Pointer: stop native select/drag/double-click highlight; still focus for typing.
+      input.addEventListener("mousedown", function (e) {
+        e.preventDefault();
+        this.focus();
+        clearTileSelection(this);
+      });
+      input.addEventListener("mouseup", function (e) {
+        e.preventDefault();
+        clearTileSelection(this);
+      });
+      input.addEventListener("dblclick", function (e) {
+        e.preventDefault();
+        clearTileSelection(this);
+      });
+      input.addEventListener("selectstart", function (e) {
+        e.preventDefault();
+      });
+      input.addEventListener("select", function (e) {
+        var el = e.target;
+        // Defer: some browsers re-apply selection after the select event
+        clearTileSelection(el);
+        setTimeout(function () {
+          clearTileSelection(el);
+        }, 0);
+      });
+      input.addEventListener("focus", function (e) {
+        var el = e.target;
+        clearTileSelection(el);
+        setTimeout(function () {
+          clearTileSelection(el);
+        }, 0);
       });
       guessTiles.push({ input: input });
       row.appendChild(input);

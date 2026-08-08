@@ -209,9 +209,19 @@ header p {
   border: 2px solid var(--border);
   background: var(--tile-gray);
   color: var(--text);
-  cursor: text;
-  caret-color: var(--accent);
+  cursor: pointer;
+  /* No visible caret/selection chrome — tiles are click-to-cycle + type */
+  caret-color: transparent;
   padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.guess-tile::selection,
+.guess-tile::-moz-selection {
+  background: transparent;
+  color: inherit;
 }
 
 .guess-tile:focus {
