@@ -14,7 +14,7 @@ Open `index.html` locally or serve the folder as static files—no build step, n
 - **Letter status board** — Click A–Z to cycle **YES** (may appear) → **NO** (excluded) → **HAS** (must appear).
 - **Puzzle greens** — Manually set known letters at positions 1–5.
 - **Position exclusions** — Mark yellow-style “in the word, not here” constraints.
-- **Answers-only filter** — Prefer the official NYT Wordle answer list (~2.3k words). Turn off to include the full allowed-guess dictionary.
+- **Answers-only filter** — Prefer the official NYT Wordle answer list (~2.4k words). Turn off to include the full allowed-guess dictionary.
 - **Plural handling** — Exclude likely `-s` plurals from the main list, and optionally show them in a separate section.
 - **Minimums** — Require a minimum number of unique letters or unique vowels (A/E/I/O/U).
 - **Fill optimal** — One click copies the top-ranked word into the guess row (does not submit).
@@ -111,12 +111,12 @@ Opening probes that are not official answers are labeled **probe** in the UI. Th
 | List | Size | Role |
 |------|------|------|
 | Full dictionary (`words.js`) | **14,857** five-letter words | Prior dictionary plus all official NYT Wordle valid guesses (additive) |
-| Answer set (`common-words.js`) | **2,356** | Official NYT Wordle **answer** list only (from `data/wordle-answers.txt`) |
+| Answer set (`common-words.js`) | **2,436** | Official NYT Wordle **answer** list plus likely first-time promotions (from `data/wordle-answers.txt`) |
 | Source data | `data/wordle-allowed.txt`, `data/wordle-answers.txt`, `data/google-20k.txt` | Full valid-guess list, answer list, frequency list |
 
 The full dictionary remains the union of prior words and the official NYT valid-guess pool (allowed guesses + answers). Scoring and guesses can still use that larger pool when needed.
 
-**NYT answers only** (default on) keeps the main table focused on the official answer list (~2.3k). Turn the toggle off to include the full allowed-guess dictionary (~14.8k) and any local-only extras.
+**NYT answers only** (default on) keeps the main table focused on the official answer list (~2.4k). Turn the toggle off to include the full allowed-guess dictionary (~14.8k) and any local-only extras.
 
 **Plurals** are detected heuristically: five-letter words ending in a single `S`, excluding endings like `-ss`, `-us`, and `-is` (e.g. glass, focus, basis).
 
@@ -200,7 +200,7 @@ Everything runs **entirely in your browser**. No network calls are made by the a
 - Ranking is **one ply** (looks one guess ahead), not a full multi-step search tree.
 - On large remaining sets, scoring may sample a subset of guess words for responsiveness.
 - Plural detection is heuristic, not a full morphological analyzer.
-- With **NYT answers only** on (default), the candidate table uses the ~2.3k answer list. Turn it off for the full ~14.8k allowed-guess dictionary.
+- With **NYT answers only** on (default), the candidate table uses the ~2.4k answer list. Turn it off for the full ~14.8k allowed-guess dictionary.
 
 ---
 

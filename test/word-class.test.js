@@ -29,11 +29,14 @@ function test(name, fn) {
 }
 
 test("common set is official NYT answer list", function () {
-  assert.strictEqual(common.COMMON_WORDS.length, 2356);
+  assert.strictEqual(common.COMMON_WORDS.length, 2436);
   assert.ok(COMMON_SET.DEATH);
   assert.ok(COMMON_SET.ABOUT);
   assert.ok(COMMON_SET.ABACK);
   assert.ok(COMMON_SET.GEODE); // NYT #1882, 2026-08-14
+  assert.ok(COMMON_SET.ASPIC); // NYT #1884, 2026-08-16
+  assert.ok(COMMON_SET.BLING);
+  assert.ok(COMMON_SET.LATKE);
   assert.ok(!COMMON_SET.NIKAU); // NYT allowed guess, not an answer
   assert.ok(!COMMON_SET.AAPAS); // NYT allowed guess, not an answer
   assert.ok(!COMMON_SET.SMURF); // local-only dict word, not NYT
@@ -41,12 +44,13 @@ test("common set is official NYT answer list", function () {
 
 test("NYT-added answers that were only on the allowed-guess list are categorized as answers", function () {
   var added = [
-    "ALOHA", "ATLAS", "ATRIA", "BALSA", "BEAUT", "CAROM", "CLUNK", "COLIC",
+    "ALOHA", "ASPIC", "ATLAS", "ATRIA", "BALSA", "BEAUT", "CAROM", "CLUNK", "COLIC",
     "CUBIT", "DIVOT", "EMOJI", "GEODE", "GIZMO", "GOFER", "GRIFT", "GUANO",
     "GUNKY", "HYDRA", "INDIE", "KAZOO", "KEFIR", "KNELL", "LASER", "LORIS",
     "MATTE", "MAVEN", "MOMMY", "MOOCH", "MUGGY", "NERVY", "OASIS", "OOMPH",
     "PIOUS", "PRIMP", "PSHAW", "SHILL", "SHRED", "SITAR", "SNAFU", "SPATE",
-    "SQUID", "SUEDE", "TAUPE", "TINGE", "TIZZY", "TOADY", "UVULA"
+    "SQUID", "SUEDE", "TAUPE", "TINGE", "TIZZY", "TOADY", "UVULA",
+    "BLING", "LATKE", "ADIEU", "UMAMI", "MOCHI", "HAIKU", "OKAPI"
   ];
   added.forEach(function (w) {
     assert.ok(COMMON_SET[w], w + " has been an official NYT answer");
@@ -120,7 +124,7 @@ test("common + exclude plurals default UI combo", function () {
   c.excludePlurals = true;
   var rows = filter.filterWords(WORDS, c, COMMON_SET);
   assert.ok(rows.length > 2000);
-  assert.ok(rows.length <= 2356);
+  assert.ok(rows.length <= 2436);
   assert.ok(rows.length < WORDS.length);
   rows.forEach(function (r) {
     assert.ok(COMMON_SET[r.word]);

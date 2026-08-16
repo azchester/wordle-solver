@@ -19,9 +19,11 @@ acute
 adage
 adapt
 adept
+adieu
 admin
 admit
 adobe
+adobo
 adopt
 adore
 adorn
@@ -37,14 +39,17 @@ agate
 agent
 agile
 aging
+aglet
 aglow
 agony
 agree
 ahead
 aider
+aioli
 aisle
 alarm
 album
+aleph
 alert
 algae
 alibi
@@ -71,18 +76,23 @@ amaze
 amber
 amble
 amend
+amigo
 amiss
 amity
 among
+amour
 ample
 amply
 amuse
+ancho
 angel
 anger
 angle
 angry
 angst
+anima
 anime
+anion
 ankle
 annex
 annoy
@@ -91,8 +101,10 @@ anode
 antic
 anvil
 aorta
+apace
 apart
 aphid
+apian
 aping
 apnea
 apple
@@ -102,6 +114,9 @@ aptly
 arbor
 ardor
 arena
+arepa
+argon
+argot
 argue
 arise
 armor
@@ -115,18 +130,27 @@ ascot
 ashen
 aside
 askew
+aspen
+aspic
 assay
 asset
+aster
+astir
+atilt
 atlas
 atoll
 atone
 atria
+attar
 attic
 audio
 audit
 augur
 aunty
+aural
+auxin
 avail
+avast
 avert
 avian
 avoid
@@ -141,6 +165,8 @@ axial
 axiom
 axion
 azure
+babel
+babka
 bacon
 badge
 badly
@@ -222,6 +248,8 @@ blend
 bless
 blimp
 blind
+bling
+blini
 blink
 bliss
 blitz
@@ -241,6 +269,7 @@ blush
 board
 boast
 bobby
+boing
 boney
 bongo
 bonus
@@ -253,6 +282,7 @@ boozy
 borax
 borne
 bosom
+boson
 bossy
 botch
 bough
@@ -292,6 +322,7 @@ brook
 broom
 broth
 brown
+bruin
 brunt
 brush
 brute
@@ -396,6 +427,7 @@ cider
 cigar
 cinch
 circa
+civet
 civic
 civil
 clack
@@ -432,6 +464,7 @@ clung
 clunk
 coach
 coast
+coati
 cobra
 cocoa
 colic
@@ -478,6 +511,7 @@ credo
 creed
 creek
 creep
+crema
 creme
 crepe
 crept
@@ -500,6 +534,7 @@ crowd
 crown
 crude
 cruel
+cruet
 crumb
 crump
 crush
@@ -508,6 +543,7 @@ crypt
 cubic
 cubit
 cumin
+curia
 curio
 curly
 curry
@@ -518,6 +554,7 @@ cutie
 cyber
 cycle
 cynic
+dacha
 daddy
 daily
 dairy
@@ -573,6 +610,7 @@ ditty
 diver
 divot
 dizzy
+djinn
 dodge
 dodgy
 dogma
@@ -856,6 +894,7 @@ gazer
 gecko
 geeky
 geese
+genet
 genie
 genre
 geode
@@ -878,6 +917,7 @@ gleam
 glean
 glide
 glint
+glitz
 gloat
 globe
 gloom
@@ -960,7 +1000,9 @@ gusto
 gusty
 gypsy
 habit
+haiku
 hairy
+halva
 halve
 handy
 happy
@@ -1039,6 +1081,7 @@ idyll
 igloo
 iliac
 image
+imago
 imbue
 impel
 imply
@@ -1057,6 +1100,7 @@ inner
 input
 inter
 intro
+inure
 ionic
 irate
 irony
@@ -1084,7 +1128,9 @@ jumpy
 junta
 junto
 juror
+kapow
 kappa
+kaput
 karma
 kayak
 kazoo
@@ -1102,11 +1148,14 @@ kneel
 knell
 knelt
 knife
+knish
 knock
 knoll
 known
 koala
 krill
+kudzu
+kugel
 label
 labor
 laden
@@ -1123,6 +1172,7 @@ lasso
 latch
 later
 lathe
+latke
 latte
 laugh
 layer
@@ -1162,6 +1212,7 @@ lithe
 liver
 livid
 llama
+llano
 loamy
 loath
 lobby
@@ -1227,6 +1278,7 @@ masse
 match
 matey
 matte
+matzo
 mauve
 maven
 maxim
@@ -1248,6 +1300,7 @@ merry
 metal
 meter
 metro
+mezze
 micro
 midge
 midst
@@ -1264,6 +1317,7 @@ mirth
 miser
 missy
 mocha
+mochi
 modal
 model
 modem
@@ -1308,12 +1362,14 @@ music
 musky
 musty
 myrrh
+nacho
 nadir
 naive
 nanny
 nasal
 nasty
 natal
+natto
 naval
 navel
 needy
@@ -1324,6 +1380,7 @@ nervy
 never
 newer
 newly
+nexus
 nicer
 niche
 niece
@@ -1358,6 +1415,7 @@ oddly
 offal
 offer
 often
+okapi
 olden
 older
 olive
@@ -1431,6 +1489,7 @@ pesto
 petal
 petty
 phase
+phlox
 phone
 phony
 photo
@@ -1466,6 +1525,7 @@ plead
 pleat
 plied
 plier
+plonk
 pluck
 plumb
 plume
@@ -1501,6 +1561,7 @@ prime
 primo
 primp
 print
+prion
 prior
 prism
 privy
@@ -1541,10 +1602,12 @@ quark
 quart
 quash
 quasi
+qubit
 queen
 queer
 quell
 query
+queso
 quest
 queue
 quick
@@ -1564,6 +1627,7 @@ radii
 radio
 rainy
 raise
+raita
 rajah
 rally
 ralph
@@ -1661,6 +1725,7 @@ rumor
 rupee
 rural
 rusty
+sable
 sadly
 safer
 saint
@@ -1761,6 +1826,7 @@ shiny
 shire
 shirk
 shirt
+shlep
 shoal
 shock
 shone
@@ -1965,6 +2031,7 @@ stilt
 sting
 stink
 stint
+stoat
 stock
 stoic
 stoke
@@ -2010,6 +2077,7 @@ surly
 sushi
 swami
 swamp
+swank
 swarm
 swash
 swath
@@ -2095,6 +2163,7 @@ throw
 thrum
 thumb
 thump
+thunk
 thyme
 tiara
 tibia
@@ -2114,6 +2183,7 @@ toady
 toast
 today
 toddy
+toffy
 token
 tonal
 tonga
@@ -2189,6 +2259,7 @@ tying
 udder
 ulcer
 ultra
+umami
 umbra
 uncle
 uncut
@@ -2267,6 +2338,7 @@ wacky
 wafer
 wager
 wagon
+wagyu
 waist
 waive
 waltz
@@ -2300,8 +2372,10 @@ whirl
 whisk
 white
 whole
+whomp
 whoop
 whose
+whump
 widen
 wider
 widow
@@ -2345,12 +2419,18 @@ wrong
 wrote
 wrung
 wryly
+xenon
 yacht
 yearn
 yeast
 yield
 young
 youth
+yowza
 zebra
 zesty
+zilch
+zingy
+zippy
+zloty
 zonal
