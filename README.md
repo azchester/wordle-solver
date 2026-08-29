@@ -111,7 +111,7 @@ Opening probes that are not official answers are labeled **probe** in the UI. Th
 | List | Size | Role |
 |------|------|------|
 | Full dictionary (`words.js`) | **14,857** five-letter words | Prior dictionary plus all official NYT Wordle valid guesses (additive) |
-| Answer set (`common-words.js`) | **2,438** | Official NYT Wordle **answer** list plus likely first-time promotions (from `data/wordle-answers.txt`) |
+| Answer set (`common-words.js`) | **2,439** | Official NYT Wordle **answer** list plus likely first-time promotions (from `data/wordle-answers.txt`) |
 | Source data | `data/wordle-allowed.txt`, `data/wordle-answers.txt`, `data/google-20k.txt` | Full valid-guess list, answer list, frequency list |
 
 The full dictionary remains the union of prior words and the official NYT valid-guess pool (allowed guesses + answers). Scoring and guesses can still use that larger pool when needed.
