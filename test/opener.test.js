@@ -65,7 +65,7 @@ test("rankForPlay greenfield: opener mode ranks full-dict probes", function () {
   var ranked = filter.rankForPlay(WORDS, c, COMMON_SET, { hasHistory: false });
   assert.strictEqual(ranked.mode, "opener");
   assert.ok(ranked.answerCount > 2000);
-  assert.ok(ranked.answerCount <= 2439);
+  assert.ok(ranked.answerCount <= 2440);
   assert.ok(ranked.rankedGuesses.length > ranked.answerCount);
   assert.ok(ranked.rankedGuesses[0].expectedRemaining < 100);
   // Best one-ply openers on this list include ROATE (guess-only)
@@ -107,7 +107,7 @@ test("rankForPlay after applyGuess: solve mode", function () {
   assert.strictEqual(filter.isGreenfield(c), false);
   var ranked = filter.rankForPlay(WORDS, c, COMMON_SET, { hasHistory: true });
   assert.strictEqual(ranked.mode, "solve");
-  assert.ok(ranked.answerCount < 2439);
+  assert.ok(ranked.answerCount < 2440);
   ranked.rankedGuesses.forEach(function (r) {
     assert.ok(COMMON_SET[r.word], r.word);
   });

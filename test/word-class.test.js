@@ -29,7 +29,7 @@ function test(name, fn) {
 }
 
 test("common set is official NYT answer list", function () {
-  assert.strictEqual(common.COMMON_WORDS.length, 2439);
+  assert.strictEqual(common.COMMON_WORDS.length, 2440);
   assert.ok(COMMON_SET.DEATH);
   assert.ok(COMMON_SET.ABOUT);
   assert.ok(COMMON_SET.ABACK);
@@ -38,6 +38,7 @@ test("common set is official NYT answer list", function () {
   assert.ok(COMMON_SET.RUNNY); // NYT #1892, 2026-08-24
   assert.ok(COMMON_SET.CAPON); // NYT #1894, 2026-08-26
   assert.ok(COMMON_SET.TWEEN); // NYT #1896, 2026-08-28
+  assert.ok(COMMON_SET.INTEL); // NYT #1898, 2026-08-30
   assert.ok(COMMON_SET.BLING);
   assert.ok(COMMON_SET.LATKE);
   assert.ok(!COMMON_SET.NIKAU); // NYT allowed guess, not an answer
@@ -53,7 +54,7 @@ test("NYT-added answers that were only on the allowed-guess list are categorized
     "MATTE", "MAVEN", "MOMMY", "MOOCH", "MUGGY", "NERVY", "OASIS", "OOMPH",
     "PIOUS", "PRIMP", "PSHAW", "SHILL", "SHRED", "SITAR", "SNAFU", "SPATE",
     "SQUID", "SUEDE", "TAUPE", "TINGE", "TIZZY", "TOADY", "UVULA",
-    "BLING", "LATKE", "ADIEU", "UMAMI", "MOCHI", "HAIKU", "OKAPI", "RUNNY", "CAPON", "TWEEN"
+    "BLING", "LATKE", "ADIEU", "UMAMI", "MOCHI", "HAIKU", "OKAPI", "RUNNY", "CAPON", "TWEEN", "INTEL"
   ];
   added.forEach(function (w) {
     assert.ok(COMMON_SET[w], w + " has been an official NYT answer");
@@ -127,7 +128,7 @@ test("common + exclude plurals default UI combo", function () {
   c.excludePlurals = true;
   var rows = filter.filterWords(WORDS, c, COMMON_SET);
   assert.ok(rows.length > 2000);
-  assert.ok(rows.length <= 2439);
+  assert.ok(rows.length <= 2440);
   assert.ok(rows.length < WORDS.length);
   rows.forEach(function (r) {
     assert.ok(COMMON_SET[r.word]);
