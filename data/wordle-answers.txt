@@ -1944,6 +1944,7 @@ sonar
 sonic
 sooth
 sooty
+soupy
 sorry
 sound
 south
