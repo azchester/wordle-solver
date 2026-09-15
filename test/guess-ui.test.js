@@ -65,6 +65,11 @@ test("known wins over optimal at confirmed positions", function () {
   assert.strictEqual(tiles[3], "N");
 });
 
+test("lockKnown false keeps the optimal word as-is", function () {
+  var tiles = filter.fillGuessFromOptimal("CRANE", ["D", "", "", "", "H"], false);
+  assert.deepStrictEqual(tiles, ["C", "R", "A", "N", "E"]);
+});
+
 test("prefill overwrites free slot when known gains a letter", function () {
   var before = filter.prefillGuessFromKnown(["X", "Y", "Z", "Q", "W"], [
     "",

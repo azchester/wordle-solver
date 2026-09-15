@@ -9,6 +9,8 @@
  *  - positionExclusions: letter must not be at given index (yellow wrong-slot)
  *  - minUniqueLetters / minUniqueVowels thresholds
  *  - optional strictAvailable: every letter in the word is YES or HAS (spreadsheet)
+ *  - hard mode (rankForPlay): remaining answers only; off = info probes
+ *    that avoid NO letters but need not reuse HAS / known greens
  *
  * Score (Java updateBestWord):
  *  frequency = sum over unique letters of (count of remaining words containing letter)
@@ -364,6 +366,9 @@
   function compareScoredRows(a, b) {
     if (a.score !== b.score) return a.score - b.score;
     if (b.entropy !== a.entropy) return b.entropy - a.entropy;
+    var ap = a.prefer ? 1 : 0;
+    var bp = b.prefer ? 1 : 0;
+    if (bp !== ap) return bp - ap;
     if (b.unique !== a.unique) return b.unique - a.unique;
     if (a.word < b.word) return -1;
     if (a.word > b.word) return 1;
@@ -401,6 +406,7 @@
    * @param {number} [opts.minUniqueForProbe] skip guesses with fewer unique letters (default 0)
    * @param {Object|null} [opts.commonSet]
    * @param {boolean} [opts.markProbe] tag rows with probe:true
+   * @param {string[]|Object} [opts.alwaysEval] words that must be fully scored
    * @returns {{ word, unique, uniqueVowels, vowels, common, plural, score, expectedRemaining, entropy, probe? }[]}
    */
   function scoreGuessPool(guessPool, answerWords, opts) {
@@ -486,6 +492,22 @@
     var evalSet = Object.create(null);
     for (i = 0; i < take; i++) evalSet[order[i].i] = true;
 
+    var mustMap = null;
+    if (opts.alwaysEval) {
+      var must = opts.alwaysEval;
+      if (Array.isArray(must)) {
+        mustMap = Object.create(null);
+        for (i = 0; i < must.length; i++) {
+          mustMap[String(must[i]).toUpperCase()] = true;
+        }
+      } else {
+        mustMap = must;
+      }
+      for (i = 0; i < pool.length; i++) {
+        if (mustMap[pool[i].word]) evalSet[i] = true;
+      }
+    }
+
     var buckets = new Int32Array(243);
     var invN = 1 / nAns;
     var log2 = Math.log(2);
@@ -493,6 +515,7 @@
 
     for (i = 0; i < pool.length; i++) {
       var row = pool[i];
+      var prefer = !!(mustMap && mustMap[row.word]);
       if (!evalSet[i]) {
         scored[i] = {
           word: row.word,
@@ -504,6 +527,7 @@
           score: nAns,
           expectedRemaining: nAns,
           entropy: 0,
+          prefer: prefer,
         };
         if (markProbe) scored[i].probe = true;
         continue;
@@ -534,6 +558,7 @@
         score: expected,
         expectedRemaining: expected,
         entropy: entropy,
+        prefer: prefer,
       };
       if (markProbe) scored[i].probe = true;
     }
@@ -571,17 +596,22 @@
    * Hybrid ranking for play:
    *  - Greenfield (open board): rank any allowed guess for max information
    *    against the remaining answer set (probe / opener mode).
-   *  - Otherwise: rank only remaining approved candidates against themselves
-   *    (solve mode).
+   *  - Hard mode (default): rank only remaining approved candidates against
+   *    themselves (solve mode). Matches Wordle hard mode: HAS letters and
+   *    known greens must appear in the next guess.
+   *  - Hard mode off: rank information probes that avoid NO / gray letters
+   *    but need not reuse HAS letters or known greens. Remaining answers
+   *    (the score set) still use full constraints.
    *
    * @param {string[]} words full dictionary (used as probe pool)
    * @param {object} constraints
    * @param {Object|null} commonSet
    * @param {object} [options]
-   * @param {boolean} [options.forceSolve] skip opener mode even if greenfield
+   * @param {boolean} [options.forceSolve] skip opener/probe even if applicable
    * @param {boolean} [options.hasHistory] treat as not greenfield when true
+   * @param {boolean} [options.hardMode] default true; false enables probe ranking
    * @returns {{
-   *   mode: 'opener'|'solve',
+   *   mode: 'opener'|'solve'|'probe',
    *   rankedGuesses: object[],
    *   candidates: object[],
    *   answerCount: number
@@ -589,6 +619,7 @@
    */
   function rankForPlay(words, constraints, commonSet, options) {
     options = options || {};
+    var hardMode = options.hardMode !== false;
     var filtered = filterWords(words, constraints, commonSet);
     var answerWords = filtered.map(function (r) {
       return r.word;
@@ -600,11 +631,38 @@
       isGreenfield(constraints);
 
     if (!greenfield || !words || !words.length || answerCount === 0) {
-      var solveRanked = scoreAndSort(filtered);
+      if (
+        hardMode ||
+        options.forceSolve ||
+        !words ||
+        !words.length ||
+        answerCount <= 1
+      ) {
+        var solveRanked = scoreAndSort(filtered);
+        return {
+          mode: "solve",
+          rankedGuesses: solveRanked,
+          candidates: solveRanked,
+          answerCount: answerCount,
+        };
+      }
+
+      var probeRows = filterWords(
+        words,
+        constraintsForProbePool(constraints),
+        commonSet
+      );
+      var probeRanked = scoreGuessPool(probeRows, answerWords, {
+        maxGuessEval: 10000,
+        minUniqueForProbe: 0,
+        commonSet: commonSet,
+        markProbe: true,
+        alwaysEval: answerWords,
+      });
       return {
-        mode: "solve",
-        rankedGuesses: solveRanked,
-        candidates: solveRanked,
+        mode: "probe",
+        rankedGuesses: probeRanked,
+        candidates: filtered,
         answerCount: answerCount,
       };
     }
@@ -680,6 +738,34 @@
       excludePlurals: !!src.excludePlurals,
       requirePlural: !!src.requirePlural,
     };
+  }
+
+  /**
+   * Constraints for an information-probe guess pool (hard mode off).
+   * Keeps NO / excluded letters so probes do not reuse known-absent tiles.
+   * Drops known greens, HAS, and position exclusions so probes need not
+   * reuse discovered letters or slots.
+   */
+  function constraintsForProbePool(constraints) {
+    var next = cloneConstraints(constraints);
+    var i;
+    next.known = ["", "", "", "", ""];
+    next.contains = [];
+    next.positionExclusions = [];
+    next.minUniqueLetters = 0;
+    next.minUniqueVowels = 0;
+    next.commonOnly = false;
+    next.excludePlurals = false;
+    next.requirePlural = false;
+    for (i = 0; i < LETTERS.length; i++) {
+      var L = LETTERS[i];
+      if (next.statuses[L] === "HAS") next.statuses[L] = "YES";
+    }
+    var lists = statusesToLists(next.statuses);
+    next.contains = lists.contains;
+    next.excludes = lists.excludes;
+    next.strictAvailable = true;
+    return next;
   }
 
   function hasPosExclusion(list, letter, position) {
@@ -899,8 +985,10 @@
   /**
    * After filling from an optimal word, re-apply known greens so confirmed
    * positions stay correct if they differ (known wins).
+   * Pass lockKnown=false to keep the optimal word as-is (hard mode off).
    */
-  function fillGuessFromOptimal(optimalWord, known) {
+  function fillGuessFromOptimal(optimalWord, known, lockKnown) {
+    if (lockKnown === false) return lettersFromWord(optimalWord);
     return prefillGuessFromKnown(lettersFromWord(optimalWord), known);
   }
 
@@ -928,6 +1016,7 @@
     rankForPlay: rankForPlay,
     filterScoreWords: filterScoreWords,
     applyGuess: applyGuess,
+    constraintsForProbePool: constraintsForProbePool,
     positionLeaders: positionLeaders,
     lettersFromKnown: lettersFromKnown,
     prefillGuessFromKnown: prefillGuessFromKnown,

@@ -10,7 +10,8 @@ Open `index.html` locally or serve the folder as static files—no build step, n
 
 - **Guess entry** — Type a 5-letter word, click tiles to cycle gray → yellow → green, then submit. Confirmed greens auto-fill on the next guess.
 - **Guess history** — Submitted guesses stay visible with their tile colors.
-- **Hybrid ranking** — Opening guess maximizes information over the full allowed list; later guesses rank remaining approved answers only (`E[left]` + entropy).
+- **Hybrid ranking** — Opening guess maximizes information over the full allowed list; later guesses follow **Hard mode** (on by default).
+- **Hard mode** — On: next guess must use every discovered letter and keep greens in place (remaining possible answers only). Off: rank information probes that avoid gray letters but need not reuse greens or yellows.
 - **Letter status board** — Click A–Z to cycle **YES** (may appear) → **NO** (excluded) → **HAS** (must appear).
 - **Puzzle greens** — Manually set known letters at positions 1–5.
 - **Position exclusions** — Mark yellow-style “in the word, not here” constraints.
@@ -49,7 +50,8 @@ There is no build toolchain and no package manager—just static HTML, CSS, and 
 3. Click **Submit guess**. Filters and the remaining-word table update automatically.
 4. Review **Optimal guess** and the **Available words** table (`E[left]` lower is better).
 5. Click **Guess** next to a word (or the optimal **Guess** button) to load it into the tile row, then color and submit again.
-6. Use **Reset all** when starting a new puzzle.
+6. Uncheck **Hard mode** to allow an information probe that ignores greens/yellows (confirmed greens unlock on the guess row).
+7. Use **Reset all** when starting a new puzzle.
 
 ### Manual constraints
 
@@ -61,6 +63,7 @@ You do not have to enter every guess as tiles. You can also:
 | **Letter status** | Force YES / NO / HAS for any letter |
 | **Position exclusion** | Require a HAS letter *not* at a given index |
 | **Word list filters** | NYT answers only, exclude plurals, show plurals separately |
+| **Hard mode** | On: recommend remaining possible answers only. Off: recommend probes that avoid gray letters |
 | **Minimums** | Prefer high-diversity or multi-vowel probes |
 
 ### Guess → filter merge rules
@@ -84,7 +87,8 @@ The app uses a **hybrid strategy**:
 | Stage | Guess pool | Secret / score set |
 |-------|------------|--------------------|
 | **Opening** (greenfield: no guesses, no letter constraints) | Full allowed dictionary (~14.8k), 5-unique-letter probes | NYT answers (or filtered remaining) |
-| **Solve** (after first guess or any constraint) | Remaining approved candidates only | Same candidate set |
+| **Hard mode on** (default, after first guess or any constraint) | Remaining approved candidates only | Same candidate set |
+| **Hard mode off** | Allowed guesses that avoid excluded (gray / NO) letters. Need not reuse HAS letters or known greens. | Remaining possible answers (full constraints) |
 
 Both stages use a **one-ply partition score**:
 
@@ -98,9 +102,11 @@ E[\text{left}] = \frac{1}{|S|} \sum_p |bucket_p|^2
 
 Lower `E[left]` means the guess tends to shrink the list more, averaged over equally likely remaining answers.
 
-**Tie-break:** higher **entropy** of the feedback partition (bits of information).
+**Tie-break:** higher **entropy** of the feedback partition (bits of information), then remaining possible answers over equal-score probes, then unique-letter count.
 
 Opening probes that are not official answers are labeled **probe** in the UI. The first open-board ranking is cached so the ~1s full-dictionary scan only runs once per answer set.
+
+With **Hard mode** off, later guesses use the same expected-remaining score, but the guess pool is every allowed word that does not contain a NO letter. Remaining possible answers are always fully scored so a winning candidate is never dropped from the eval budget. Confirmed greens are not locked on the guess row, so you can type a probe as-is.
 
 **Performance note (solve mode):** When the remaining set is very large, only a prioritized subset of guesses (preferring high unique-letter counts) is fully scored against every remaining answer so the UI stays responsive. Unscored rows sort after fully scored ones.
 
@@ -140,6 +146,7 @@ wordle-solver/
     ├── filter.test.js
     ├── guess.test.js
     ├── guess-ui.test.js
+    ├── hard-mode.test.js
     ├── opener.test.js
     ├── row-guess.test.js
     └── word-class.test.js
@@ -171,6 +178,7 @@ node test/guess-ui.test.js
 node test/row-guess.test.js
 node test/word-class.test.js
 node test/opener.test.js
+node test/hard-mode.test.js
 ```
 
 Or:
@@ -179,7 +187,7 @@ Or:
 for f in test/*.test.js; do node "$f" || exit 1; done
 ```
 
-Coverage includes dictionary shape, viability filters, Wordle feedback / `applyGuess` merge rules, word-class toggles (common / plural), and UI-oriented guess helpers.
+Coverage includes dictionary shape, viability filters, Wordle feedback / `applyGuess` merge rules, hard-mode vs info-probe ranking, word-class toggles (common / plural), and UI-oriented guess helpers.
 
 ---
 

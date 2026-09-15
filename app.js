@@ -59,6 +59,19 @@
   var toggleCommonOnly = document.getElementById("toggle-common-only");
   var toggleExcludePlurals = document.getElementById("toggle-exclude-plurals");
   var toggleShowPlurals = document.getElementById("toggle-show-plurals");
+  var toggleHardMode = document.getElementById("toggle-hard-mode");
+
+  function isHardMode() {
+    return !toggleHardMode || !!toggleHardMode.checked;
+  }
+
+  function isSlotLocked(idx) {
+    return isHardMode() && !!(state.known && state.known[idx]);
+  }
+
+  function isProbePlay(mode) {
+    return mode === "opener" || mode === "probe";
+  }
 
   function normalizeKnownChar(raw) {
     if (!raw) return "";
@@ -190,7 +203,7 @@
       tr.setAttribute("data-word", r.word);
       var wordLabel = r.word;
       var wordTitle = "";
-      if (playMode === "opener" && r.common === false) {
+      if (isProbePlay(playMode) && r.common === false) {
         wordLabel = r.word + " · probe";
         wordTitle = ' title="Allowed guess for information; not an official NYT answer"';
         tr.className = "probe-guess";
@@ -224,16 +237,22 @@
     state.minUniqueVowels = Number(minVowelsEl.value) || 0;
     state.frequencyWeight = Number(freqWeightEl.value) / 100;
 
-    // Keep guess tiles in sync with known greens
+    // Keep guess tiles in sync with known greens only in hard mode
     if (guessTiles.length === 5) {
-      prefillGuessTilesFromKnown();
+      if (isHardMode()) {
+        prefillGuessTilesFromKnown();
+      } else {
+        for (var ti = 0; ti < 5; ti++) paintGuessTile(ti);
+      }
     }
 
     // Hybrid ranking:
     //  - greenfield (no guesses / constraints): best info probe from full dict
-    //  - after that: only remaining approved candidates (NYT answers when toggle on)
+    //  - hard mode on: only remaining approved candidates
+    //  - hard mode off: info probes that avoid gray letters
     var ranked = filter.rankForPlay(words, state, commonSet, {
       hasHistory: guessHistory.length > 0,
+      hardMode: isHardMode(),
     });
     playMode = ranked.mode;
     resultsCache = ranked.rankedGuesses;
@@ -287,8 +306,10 @@
       var bits = [];
       if (playMode === "opener") {
         bits.push("opening probe (full allowed list for max info)");
+      } else if (playMode === "probe") {
+        bits.push("info probe (avoid gray letters; greens/yellows optional)");
       } else {
-        bits.push("solve mode (approved candidates only)");
+        bits.push("hard mode (approved candidates only)");
       }
       if (state.commonOnly) bits.push("answers only after opener");
       else bits.push("full dictionary candidates");
@@ -310,13 +331,18 @@
           "Opening guess: ranked by <strong>expected remaining answers</strong> " +
           "using the full allowed-guess dictionary for maximum information " +
           "(lower is better). Words marked <em>probe</em> are valid guesses " +
-          "but not official answers. After your first guess, ranking switches " +
-          "to the approved answer list only.";
+          "but not official answers.";
+      } else if (playMode === "probe") {
+        rankingHint.innerHTML =
+          "Hard mode off: ranked by <strong>expected remaining answers</strong> " +
+          "using allowed guesses that avoid excluded (gray) letters. Probes " +
+          "need not reuse greens or yellows (lower is better). Remaining " +
+          "possible answers still use full constraints.";
       } else {
         rankingHint.innerHTML =
-          "Ranked by <strong>expected remaining candidates</strong> after the " +
-          "Wordle color pattern (lower is better). Tie-break: entropy " +
-          "(bits). Guesses are drawn only from remaining approved candidates.";
+          "Hard mode: ranked by <strong>expected remaining candidates</strong> " +
+          "after the Wordle color pattern (lower is better). Tie-break: entropy " +
+          "(bits). Guesses must use every discovered letter and keep greens in place.";
       }
     }
 
@@ -324,7 +350,7 @@
 
     // Position leaders from remaining answers, not probe ranking
     var leaders = filter.positionLeaders(
-      playMode === "opener" ? candidatesCache : resultsCache
+      playMode === "solve" ? resultsCache : candidatesCache
     );
     leadersEl.innerHTML = leaders
       .map(function (L, i) {
@@ -407,7 +433,7 @@
     var r = resultsCache[optimalIndex];
     optimalWordEl.textContent = r.word;
     var scoreTxt = formatExpected(r.score);
-    if (playMode === "opener" && r.common === false) {
+    if (isProbePlay(playMode) && r.common === false) {
       scoreTxt += " · probe";
     } else if (playMode === "opener") {
       scoreTxt += " · opener";
@@ -467,7 +493,7 @@
   function paintGuessTile(idx) {
     var tile = guessTiles[idx];
     var st = pendingTileStatuses[idx];
-    var locked = !!(state.known && state.known[idx]);
+    var locked = isSlotLocked(idx);
     tile.input.className =
       "guess-tile tile-" + st + (locked ? " locked" : "");
     tile.input.setAttribute("data-tile-status", st);
@@ -504,28 +530,27 @@
     for (var i = 0; i < 5; i++) {
       guessTiles[i].input.value = letters[i] || "";
       if (resetColors) {
-        pendingTileStatuses[i] = state.known && state.known[i] ? "green" : "gray";
+        pendingTileStatuses[i] = isSlotLocked(i) ? "green" : "gray";
       }
       paintGuessTile(i);
     }
   }
 
   function clearGuessTiles() {
-    // Clear free tiles only; known greens stay
-    var known = state.known || ["", "", "", "", ""];
+    // Hard mode: clear free tiles only; known greens stay.
+    // Hard mode off: clear every tile so a probe can be typed.
     for (var i = 0; i < 5; i++) {
-      if (!known[i]) {
+      if (!isSlotLocked(i)) {
         guessTiles[i].input.value = "";
         pendingTileStatuses[i] = "gray";
       } else {
-        guessTiles[i].input.value = known[i];
+        guessTiles[i].input.value = state.known[i];
         pendingTileStatuses[i] = "green";
       }
       paintGuessTile(i);
     }
-    // focus first free tile
     for (var j = 0; j < 5; j++) {
-      if (!known[j]) {
+      if (!isSlotLocked(j)) {
         guessTiles[j].input.focus();
         break;
       }
@@ -534,7 +559,8 @@
 
   /**
    * Fill guess tiles from any five-letter word (optimal panel or table row).
-   * Uses shipped fillGuessFromOptimal merge: known greens override positions.
+   * Hard mode: known greens override positions.
+   * Hard mode off: the word is copied as-is so probes can ignore greens.
    * Does not submit.
    */
   function fillGuessFromWord(word) {
@@ -544,9 +570,10 @@
       .replace(/[^A-Z]/g, "");
     if (word.length !== 5) return;
     readKnownFromInputs();
-    var letters = filter.fillGuessFromOptimal(word, state.known);
+    var lockKnown = isHardMode();
+    var letters = filter.fillGuessFromOptimal(word, state.known, lockKnown);
     setGuessLetters(letters, { resetColors: true });
-    prefillGuessTilesFromKnown();
+    if (lockKnown) prefillGuessTilesFromKnown();
   }
 
   function fillGuessFromOptimalWord() {
@@ -570,12 +597,15 @@
     guessHistory.push(result.historyEntry);
     applyStateToControls();
     renderHistory();
-    // Reset free tiles; prefill new knowns
+    // Reset tiles; hard mode prefills new knowns
     for (var i = 0; i < 5; i++) {
       guessTiles[i].input.value = "";
       pendingTileStatuses[i] = "gray";
     }
-    prefillGuessTilesFromKnown();
+    if (isHardMode()) prefillGuessTilesFromKnown();
+    else {
+      for (var t = 0; t < 5; t++) paintGuessTile(t);
+    }
     refresh();
   }
 
@@ -623,17 +653,16 @@
       input.addEventListener("input", function (e) {
         var el = e.target;
         var idx = Number(el.dataset.index);
-        // Locked known greens cannot be typed over
-        if (state.known && state.known[idx]) {
+        // Locked known greens cannot be typed over (hard mode)
+        if (isSlotLocked(idx)) {
           el.value = state.known[idx];
           return;
         }
         var ch = normalizeKnownChar(el.value);
         el.value = ch;
         if (ch && idx < 4) {
-          // skip locked tiles when advancing
           var n = idx + 1;
-          while (n < 5 && state.known && state.known[n]) n++;
+          while (n < 5 && isSlotLocked(n)) n++;
           if (n < 5) guessTiles[n].input.focus();
         }
       });
@@ -643,19 +672,19 @@
         // Type/replace letters without relying on native text selection
         if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
           e.preventDefault();
-          if (state.known && state.known[idx]) return;
+          if (isSlotLocked(idx)) return;
           var ch = normalizeKnownChar(e.key);
           el.value = ch;
           paintGuessTile(idx);
           if (ch && idx < 4) {
             var n = idx + 1;
-            while (n < 5 && state.known && state.known[n]) n++;
+            while (n < 5 && isSlotLocked(n)) n++;
             if (n < 5) guessTiles[n].input.focus();
           }
           return;
         }
         if (e.key === "Backspace") {
-          if (el.value && !(state.known && state.known[idx])) {
+          if (el.value && !isSlotLocked(idx)) {
             e.preventDefault();
             el.value = "";
             pendingTileStatuses[idx] = "gray";
@@ -664,7 +693,7 @@
           }
           if (!el.value && idx > 0) {
             var p = idx - 1;
-            while (p > 0 && state.known && state.known[p]) p--;
+            while (p > 0 && isSlotLocked(p)) p--;
             guessTiles[p].input.focus();
           }
         }
@@ -674,7 +703,7 @@
         }
         if (e.key === " " || e.key === "Spacebar") {
           e.preventDefault();
-          if (!(state.known && state.known[idx])) cycleTileStatus(idx);
+          if (!isSlotLocked(idx)) cycleTileStatus(idx);
         }
         if (e.key === "ArrowLeft" && idx > 0) {
           e.preventDefault();
@@ -746,6 +775,7 @@
     if (toggleCommonOnly) toggleCommonOnly.checked = true;
     if (toggleExcludePlurals) toggleExcludePlurals.checked = true;
     if (toggleShowPlurals) toggleShowPlurals.checked = false;
+    if (toggleHardMode) toggleHardMode.checked = true;
     for (var j = 0; j < filter.LETTERS.length; j++) {
       renderLetterButton(filter.LETTERS[j]);
     }
@@ -946,6 +976,9 @@
   if (toggleShowPlurals) {
     toggleShowPlurals.addEventListener("change", refresh);
   }
+  if (toggleHardMode) {
+    toggleHardMode.addEventListener("change", refresh);
+  }
   document.getElementById("posex-add").addEventListener("click", function () {
     var letter = posexLetterSel.value;
     var position = Number(posexPosSel.value);
@@ -1006,7 +1039,6 @@
       }
       refreshPosexLetterOptions();
       refresh();
-      prefillGuessTilesFromKnown();
     },
     getGuessLetters: function () {
       return readGuessLetters();
@@ -1017,6 +1049,11 @@
     /** Fill guess tiles from an arbitrary word (same path as row Guess). */
     fillGuessFromWord: function (word) {
       fillGuessFromWord(word);
+    },
+    isHardMode: isHardMode,
+    setHardMode: function (on) {
+      if (toggleHardMode) toggleHardMode.checked = !!on;
+      refresh();
     },
     prefillFromKnown: function () {
       prefillGuessTilesFromKnown();

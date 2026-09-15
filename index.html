@@ -86,8 +86,8 @@
             <p class="hint">
               Type a 5-letter word, then click a filled tile to cycle
               <strong>gray</strong> (absent) → <strong>yellow</strong> (wrong
-              spot) → <strong>green</strong> (correct). Confirmed greens
-              auto-fill. Submit updates filters.
+              spot) → <strong>green</strong> (correct). In hard mode, confirmed
+              greens auto-fill and lock. Submit updates filters.
             </p>
             <div class="guess-row" id="guess-tiles"></div>
             <div class="guess-actions">
@@ -198,10 +198,21 @@
 
           <section class="panel" aria-labelledby="weight-heading">
             <h2 id="weight-heading">Ranking</h2>
+            <div class="class-toggles">
+              <label class="check-label">
+                <input type="checkbox" id="toggle-hard-mode" checked />
+                Hard mode
+              </label>
+            </div>
+            <p class="hint">
+              On (default): next guess must use every discovered letter and keep
+              greens in place — remaining possible answers only. Off: recommend
+              an information probe that avoids gray letters but need not reuse
+              greens or yellows.
+            </p>
             <p class="hint" id="ranking-hint">
               Opening guess uses the full allowed list for max information;
-              later guesses rank remaining approved candidates only (lower
-              E[left] is better).
+              later guesses follow hard mode (on) or an info probe (off).
             </p>
             <!-- legacy weight controls kept hidden for API compatibility -->
             <input type="hidden" id="freq-weight" value="65" />
