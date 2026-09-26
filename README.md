@@ -78,6 +78,8 @@ When you submit a guess, tile colors merge into constraints as follows:
 
 This matches standard Wordle multi-letter handling: a gray tile never fully excludes a letter that also scored yellow or green, but it *does* exclude that letter from the gray position (e.g. `CURRY` with green R then gray R → R stays HAS, R forbidden at the gray slot).
 
+Green and yellow copies in a single guess also establish a minimum letter count. For example, `SHEEN` with one green E and one yellow E requires at least two E's in every remaining answer and hard-mode recommendation. Counts carry forward using the highest confirmed minimum, without adding repeated evidence from separate guesses. The letter board displays `HAS ≥2` for two required copies; cycling the letter to YES or NO clears its minimum. Reset all clears every minimum.
+
 ---
 
 ## How ranking works

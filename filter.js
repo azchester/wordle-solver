@@ -108,6 +108,7 @@
       contains: [],
       excludes: [],
       positionExclusions: [], // { letter: 'A', position: 0 }
+      minLetterCounts: {}, // green + yellow occurrences confirmed in one guess
       minUniqueLetters: 0,
       minUniqueVowels: 0,
       frequencyWeight: 0.65,
@@ -205,6 +206,17 @@
 
     for (i = 0; i < lists.contains.length; i++) {
       if (word.indexOf(lists.contains[i]) === -1) return false;
+    }
+
+    var minimums = constraints.minLetterCounts || {};
+    var requiredLetters = Object.keys(minimums);
+    for (i = 0; i < requiredLetters.length; i++) {
+      ch = requiredLetters[i];
+      var count = 0;
+      for (var j = 0; j < word.length; j++) {
+        if (word.charAt(j) === ch) count++;
+      }
+      if (count < minimums[ch]) return false;
     }
 
     // Spreadsheet: every letter present must be YES or HAS (not NO / missing)
@@ -353,6 +365,9 @@
       return false;
     }
     if (c.positionExclusions && c.positionExclusions.length) return false;
+    if (Object.keys(c.minLetterCounts || {}).some(function (letter) {
+      return c.minLetterCounts[letter] > 0;
+    })) return false;
     var statuses = c.statuses;
     if (statuses) {
       for (i = 0; i < LETTERS.length; i++) {
@@ -720,12 +735,17 @@
     var posEx = (src.positionExclusions || []).map(function (pe) {
       return { letter: String(pe.letter).toUpperCase(), position: pe.position | 0 };
     });
+    var minLetterCounts = {};
+    Object.keys(src.minLetterCounts || {}).forEach(function (letter) {
+      minLetterCounts[letter] = src.minLetterCounts[letter];
+    });
     return {
       statuses: statuses,
       known: known,
       contains: (src.contains || []).slice(),
       excludes: (src.excludes || []).slice(),
       positionExclusions: posEx,
+      minLetterCounts: minLetterCounts,
       minUniqueLetters: src.minUniqueLetters || 0,
       minUniqueVowels: src.minUniqueVowels || 0,
       frequencyWeight:
@@ -752,6 +772,7 @@
     next.known = ["", "", "", "", ""];
     next.contains = [];
     next.positionExclusions = [];
+    next.minLetterCounts = {};
     next.minUniqueLetters = 0;
     next.minUniqueVowels = 0;
     next.commonOnly = false;
@@ -816,13 +837,19 @@
 
     var next = cloneConstraints(constraints);
 
-    // Letters that are green or yellow on THIS guess (cannot be fully gray-excluded)
+    // Count green/yellow copies within this guess, not across guesses.
     var requiredOnGuess = Object.create(null);
     for (i = 0; i < 5; i++) {
       if (tiles[i] === "green" || tiles[i] === "yellow") {
-        requiredOnGuess[word.charAt(i)] = true;
+        var letter = word.charAt(i);
+        requiredOnGuess[letter] = (requiredOnGuess[letter] || 0) + 1;
       }
     }
+    Object.keys(requiredOnGuess).forEach(function (letter) {
+      next.minLetterCounts[letter] = Math.max(
+        next.minLetterCounts[letter] || 0, requiredOnGuess[letter]
+      );
+    });
 
     // Apply greens and yellows first
     for (i = 0; i < 5; i++) {

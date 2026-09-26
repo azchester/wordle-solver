@@ -350,6 +350,61 @@ test("historyEntry tiles normalized from aliases", function () {
   ]);
 });
 
+test("ROATE then SHEEN requires two E's in every hard-mode recommendation", function () {
+  var c = filter.applyGuess(open(), "ROATE", ["gray", "gray", "gray", "gray", "yellow"]).constraints;
+  c = filter.applyGuess(c, "SHEEN", ["gray", "gray", "green", "yellow", "gray"]).constraints;
+  c.commonOnly = true;
+  c.excludePlurals = true;
+  var commonSet = require(path.join(root, "common-words.js")).COMMON_SET;
+  var ranked = filter.rankForPlay(WORDS, c, commonSet, { hasHistory: true, hardMode: true });
+  assert.strictEqual(c.minLetterCounts.E, 2);
+  assert.strictEqual(filter.isViable("FIELD", c), false);
+  assert.deepStrictEqual(ranked.candidates.map(function (r) { return r.word; }).sort(),
+    ["BEEFY", "ELEGY", "GEEKY", "WEEDY"]);
+  assert.ok(ranked.rankedGuesses.length > 0);
+  ranked.rankedGuesses.forEach(function (r) {
+    assert.ok(r.word.split("E").length - 1 >= 2, r.word);
+    assert.strictEqual(filter.feedbackId("ROATE", r.word), 81);
+    assert.strictEqual(filter.feedbackId("SHEEN", r.word), 45);
+  });
+  var probe = filter.constraintsForProbePool(c);
+  assert.strictEqual(filter.isViable("FIELD", probe), true);
+  assert.strictEqual(c.minLetterCounts.E, 2, "probe must not mutate answer constraints");
+});
+
+test("duplicate counts accumulate by maximum, not sum, without mutating prior state", function () {
+  var first = filter.applyGuess(open(), "SHEEN", ["gray", "gray", "green", "yellow", "gray"]).constraints;
+  var second = filter.applyGuess(first, "ELEGY", ["yellow", "gray", "green", "gray", "gray"]).constraints;
+  assert.strictEqual(second.minLetterCounts.E, 2);
+  second = filter.applyGuess(second, "FIELD", ["gray", "gray", "green", "gray", "gray"]).constraints;
+  assert.strictEqual(second.minLetterCounts.E, 2, "later single E cannot weaken minimum");
+  second.minLetterCounts.E = 3;
+  assert.strictEqual(first.minLetterCounts.E, 2);
+  assert.deepStrictEqual(open().minLetterCounts, {});
+});
+
+test("two yellows require two copies; gray duplicates do not increase minimum", function () {
+  var c = filter.applyGuess(open(), "EERIE", ["yellow", "yellow", "gray", "gray", "gray"]).constraints;
+  assert.strictEqual(c.minLetterCounts.E, 2);
+  assert.strictEqual(filter.isViable("SPEED", c), true);
+  assert.strictEqual(filter.isViable("SPECK", c), false);
+  var one = filter.applyGuess(open(), "SHEEN", ["gray", "gray", "green", "gray", "gray"]).constraints;
+  assert.strictEqual(one.minLetterCounts.E, 1);
+  assert.strictEqual(filter.isViable("FIELD", one), true);
+});
+
+test("count-only constraints survive cloning and prevent opener mode", function () {
+  var c = open();
+  c.minLetterCounts.E = 2;
+  var copy = filter.cloneConstraints(c);
+  assert.strictEqual(filter.isGreenfield(copy), false);
+  assert.strictEqual(filter.isViable("FIELD", copy), false);
+  assert.strictEqual(filter.isViable("WEEDY", copy), true);
+  delete copy.minLetterCounts.E;
+  assert.strictEqual(c.minLetterCounts.E, 2);
+  assert.strictEqual(filter.isViable("FIELD", { contains: ["E"] }), true);
+});
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 if (failed > 0) process.exit(1);

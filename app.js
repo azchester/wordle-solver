@@ -99,10 +99,12 @@
   function renderLetterButton(ch) {
     var btn = letterButtons[ch];
     var st = state.statuses[ch];
+    var minimum = state.minLetterCounts[ch] || 0;
     btn.className = "letter-btn status-" + st;
     btn.setAttribute("data-status", st);
-    btn.querySelector(".st").textContent = st;
-    btn.setAttribute("aria-label", ch + " status " + st);
+    btn.querySelector(".st").textContent = minimum > 1 ? st + " ≥" + minimum : st;
+    btn.setAttribute("aria-label", ch + " status " + st +
+      (minimum > 1 ? ", at least " + minimum + " copies" : ""));
   }
 
   function cycleStatus(ch) {
@@ -110,6 +112,7 @@
     var idx = STATUS_CYCLE.indexOf(cur);
     var next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
     state.statuses[ch] = next;
+    if (next !== "HAS") delete state.minLetterCounts[ch];
 
     // If known green uses this letter, keep it as HAS-equivalent
     if (next === "NO") {
@@ -1061,6 +1064,7 @@
     setStatus: function (ch, status) {
       ch = String(ch).toUpperCase();
       state.statuses[ch] = status;
+      if (status !== "HAS") delete state.minLetterCounts[ch];
       renderLetterButton(ch);
       refreshPosexLetterOptions();
       refresh();
