@@ -226,4 +226,4 @@ Issues and pull requests are welcome. When changing filter or scoring behavior, 
 
 ## License
 
-No license file is currently published in this repository. If you fork or redistribute, check with the maintainer or add an explicit license of your choice (e.g. MIT).
+[MIT](LICENSE) — free to use, modify, and share.
