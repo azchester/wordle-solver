@@ -29,7 +29,7 @@ function test(name, fn) {
 }
 
 test("common set is official NYT answer list", function () {
-  assert.strictEqual(common.COMMON_WORDS.length, 2456);
+  assert.strictEqual(common.COMMON_WORDS.length, 2457);
   assert.ok(COMMON_SET.DEATH);
   assert.ok(COMMON_SET.ABOUT);
   assert.ok(COMMON_SET.ABACK);
@@ -55,6 +55,7 @@ test("common set is official NYT answer list", function () {
   assert.ok(COMMON_SET.YODEL); // NYT #1941, 2026-10-12
   assert.ok(COMMON_SET.PSYCH); // NYT #1943, 2026-10-14
   assert.ok(COMMON_SET.TRILL); // NYT #1952, 2026-10-23
+  assert.ok(COMMON_SET.HOLEY); // NYT #1953, 2026-10-24
   assert.ok(COMMON_SET.BLING);
   assert.ok(COMMON_SET.LATKE);
   assert.ok(!COMMON_SET.NIKAU); // NYT allowed guess, not an answer
@@ -70,7 +71,7 @@ test("NYT-added answers that were only on the allowed-guess list are categorized
     "MATTE", "MAVEN", "MOMMY", "MOOCH", "MUGGY", "NERVY", "OASIS", "OOMPH",
     "PIOUS", "PRIMP", "PSHAW", "SHILL", "SHRED", "SITAR", "SNAFU", "SPATE",
     "SQUID", "SUEDE", "TAUPE", "TINGE", "TIZZY", "TOADY", "UVULA",
-    "BLING", "LATKE", "ADIEU", "UMAMI", "MOCHI", "HAIKU", "OKAPI", "RUNNY", "CAPON", "TWEEN", "INTEL", "SOUPY", "BEIGE", "LIVEN", "NIFTY", "WAKEN", "PAGER", "MESSY", "RITZY", "USURY", "PEEVE", "STREW", "BUMPY", "UNCAP", "YODEL", "PSYCH", "TRILL"
+    "BLING", "LATKE", "ADIEU", "UMAMI", "MOCHI", "HAIKU", "OKAPI", "RUNNY", "CAPON", "TWEEN", "INTEL", "SOUPY", "BEIGE", "LIVEN", "NIFTY", "WAKEN", "PAGER", "MESSY", "RITZY", "USURY", "PEEVE", "STREW", "BUMPY", "UNCAP", "YODEL", "PSYCH", "TRILL", "HOLEY"
   ];
   added.forEach(function (w) {
     assert.ok(COMMON_SET[w], w + " has been an official NYT answer");
@@ -144,7 +145,7 @@ test("common + exclude plurals default UI combo", function () {
   c.excludePlurals = true;
   var rows = filter.filterWords(WORDS, c, COMMON_SET);
   assert.ok(rows.length > 2000);
-  assert.ok(rows.length <= 2456);
+  assert.ok(rows.length <= 2457);
   assert.ok(rows.length < WORDS.length);
   rows.forEach(function (r) {
     assert.ok(COMMON_SET[r.word]);
