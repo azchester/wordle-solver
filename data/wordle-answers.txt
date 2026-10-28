@@ -971,6 +971,7 @@ grime
 grimy
 grind
 gripe
+grist
 groan
 groin
 groom
