@@ -1780,6 +1780,7 @@ scoff
 scold
 scone
 scoop
+scoot
 scope
 score
 scorn
