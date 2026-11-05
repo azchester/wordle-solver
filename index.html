@@ -87,7 +87,8 @@
               Type a 5-letter word, then click a filled tile to cycle
               <strong>gray</strong> (absent) → <strong>yellow</strong> (wrong
               spot) → <strong>green</strong> (correct). In hard mode, confirmed
-              greens auto-fill and lock. Submit updates filters.
+              greens auto-fill and lock. Submit updates filters. Undo guess
+              removes the latest submission and puts that word back in the row.
             </p>
             <div class="guess-row" id="guess-tiles"></div>
             <div class="guess-actions">
@@ -96,6 +97,14 @@
               </button>
               <button type="button" class="btn secondary" id="guess-clear">
                 Clear free tiles
+              </button>
+              <button
+                type="button"
+                class="btn secondary"
+                id="guess-undo"
+                disabled
+              >
+                Undo guess
               </button>
             </div>
           </section>

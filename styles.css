@@ -498,6 +498,13 @@ input[type="number"] {
   filter: brightness(1.06);
 }
 
+.btn:disabled,
+.btn:disabled:hover {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: none;
+}
+
 .btn.secondary {
   background: transparent;
   color: var(--text);

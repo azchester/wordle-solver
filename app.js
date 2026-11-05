@@ -31,6 +31,8 @@
   var pluralsCache = [];
   var optimalIndex = 0;
   var guessHistory = [];
+  // Constraints from just before each submitted guess, parallel to guessHistory.
+  var constraintSnapshots = [];
   var playMode = "solve"; // 'opener' | 'solve'
   var guessTiles = []; // { input, status }
   var pendingTileStatuses = ["gray", "gray", "gray", "gray", "gray"];
@@ -483,6 +485,17 @@
     if (historyEmptyEl) {
       historyEmptyEl.hidden = guessHistory.length > 0;
     }
+    syncUndoButton();
+  }
+
+  function syncUndoButton() {
+    var btn = document.getElementById("guess-undo");
+    if (!btn) return;
+    var canUndo = guessHistory.length > 0;
+    btn.disabled = !canUndo;
+    btn.title = canUndo
+      ? "Remove the latest guess and restore the previous filters"
+      : "No guess to undo";
   }
 
   function readGuessLetters() {
@@ -595,9 +608,11 @@
       alert("Enter a full 5-letter guess before submitting.");
       return;
     }
+    var prior = filter.cloneConstraints(state);
     var result = filter.applyGuess(state, word, pendingTileStatuses.slice());
     state = result.constraints;
     guessHistory.push(result.historyEntry);
+    constraintSnapshots.push(prior);
     applyStateToControls();
     renderHistory();
     // Reset tiles; hard mode prefills new knowns
@@ -610,6 +625,34 @@
       for (var t = 0; t < 5; t++) paintGuessTile(t);
     }
     refresh();
+  }
+
+  /**
+   * Drop the latest submitted guess, restore filters from before it, and
+   * put that word back in the guess row so its colors can be corrected.
+   */
+  function undoLatestGuess() {
+    if (!guessHistory.length) return;
+    var entry = guessHistory.pop();
+    var prior = constraintSnapshots.pop();
+    if (prior) state = prior;
+    applyStateToControls();
+    renderHistory();
+    for (var i = 0; i < 5; i++) {
+      guessTiles[i].input.value = entry.word.charAt(i);
+      pendingTileStatuses[i] = entry.tiles[i] || "gray";
+    }
+    if (isHardMode()) prefillGuessTilesFromKnown();
+    else {
+      for (var t = 0; t < 5; t++) paintGuessTile(t);
+    }
+    refresh();
+    for (var j = 0; j < 5; j++) {
+      if (!isSlotLocked(j)) {
+        guessTiles[j].input.focus();
+        break;
+      }
+    }
   }
 
   function cycleTileStatus(idx) {
@@ -769,6 +812,7 @@
     state.excludePlurals = true;
     state.requirePlural = false;
     guessHistory = [];
+    constraintSnapshots = [];
     for (var i = 0; i < 5; i++) knownInputs[i].value = "";
     minUniqueEl.value = "0";
     minVowelsEl.value = "0";
@@ -949,6 +993,7 @@
   document.getElementById("reset-btn").addEventListener("click", resetAll);
   document.getElementById("guess-submit").addEventListener("click", submitGuess);
   document.getElementById("guess-clear").addEventListener("click", clearGuessTiles);
+  document.getElementById("guess-undo").addEventListener("click", undoLatestGuess);
   document
     .getElementById("fill-optimal-guess")
     .addEventListener("click", fillGuessFromOptimalWord);
@@ -1105,6 +1150,7 @@
       }
       submitGuess();
     },
+    undoGuess: undoLatestGuess,
     reset: resetAll,
     refresh: refresh,
   };
