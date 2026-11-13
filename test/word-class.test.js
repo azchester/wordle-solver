@@ -29,7 +29,7 @@ function test(name, fn) {
 }
 
 test("common set is official NYT answer list", function () {
-  assert.strictEqual(common.COMMON_WORDS.length, 2462);
+  assert.strictEqual(common.COMMON_WORDS.length, 2463);
   assert.ok(COMMON_SET.DEATH);
   assert.ok(COMMON_SET.ABOUT);
   assert.ok(COMMON_SET.ABACK);
@@ -61,6 +61,7 @@ test("common set is official NYT answer list", function () {
   assert.ok(COMMON_SET.SCOOT); // NYT #1962, 2026-11-02
   assert.ok(COMMON_SET.PARCH); // NYT #1965, 2026-11-05
   assert.ok(COMMON_SET.PRATE); // NYT #1967, 2026-11-07
+  assert.ok(COMMON_SET.MOXIE); // NYT #1973, 2026-11-13
   assert.ok(COMMON_SET.BLING);
   assert.ok(COMMON_SET.LATKE);
   assert.ok(!COMMON_SET.NIKAU); // NYT allowed guess, not an answer
@@ -76,7 +77,7 @@ test("NYT-added answers that were only on the allowed-guess list are categorized
     "MATTE", "MAVEN", "MOMMY", "MOOCH", "MUGGY", "NERVY", "OASIS", "OOMPH",
     "PIOUS", "PRIMP", "PSHAW", "SHILL", "SHRED", "SITAR", "SNAFU", "SPATE",
     "SQUID", "SUEDE", "TAUPE", "TINGE", "TIZZY", "TOADY", "UVULA",
-    "BLING", "LATKE", "ADIEU", "UMAMI", "MOCHI", "HAIKU", "OKAPI", "RUNNY", "CAPON", "TWEEN", "INTEL", "SOUPY", "BEIGE", "LIVEN", "NIFTY", "WAKEN", "PAGER", "MESSY", "RITZY", "USURY", "PEEVE", "STREW", "BUMPY", "UNCAP", "YODEL", "PSYCH", "TRILL", "HOLEY", "DRECK", "GRIST", "SCOOT", "PARCH", "PRATE"
+    "BLING", "LATKE", "ADIEU", "UMAMI", "MOCHI", "HAIKU", "OKAPI", "RUNNY", "CAPON", "TWEEN", "INTEL", "SOUPY", "BEIGE", "LIVEN", "NIFTY", "WAKEN", "PAGER", "MESSY", "RITZY", "USURY", "PEEVE", "STREW", "BUMPY", "UNCAP", "YODEL", "PSYCH", "TRILL", "HOLEY", "DRECK", "GRIST", "SCOOT", "PARCH", "PRATE", "MOXIE"
   ];
   added.forEach(function (w) {
     assert.ok(COMMON_SET[w], w + " has been an official NYT answer");
@@ -150,7 +151,7 @@ test("common + exclude plurals default UI combo", function () {
   c.excludePlurals = true;
   var rows = filter.filterWords(WORDS, c, COMMON_SET);
   assert.ok(rows.length > 2000);
-  assert.ok(rows.length <= 2462);
+  assert.ok(rows.length <= 2463);
   assert.ok(rows.length < WORDS.length);
   rows.forEach(function (r) {
     assert.ok(COMMON_SET[r.word]);
